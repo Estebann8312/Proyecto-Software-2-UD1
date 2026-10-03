@@ -1,8 +1,8 @@
 from rest_framework import viewsets
-from .models import CategoriaPieza, Pieza, Proveedor, LoteCompra
+from .models import CategoriaPieza, Pieza, Proveedor, LoteCompra, Venta, DetalleVenta
 from .serializers import (
     CategoriaPiezaSerializer, PiezaSerializer,
-    ProveedorSerializer, LoteCompraSerializer
+    ProveedorSerializer, LoteCompraSerializer, VentaSerializer
 )
 
 class CategoriaPiezaViewSet(viewsets.ModelViewSet):
@@ -20,3 +20,7 @@ class ProveedorViewSet(viewsets.ModelViewSet):
 class LoteCompraViewSet(viewsets.ModelViewSet):
     queryset = LoteCompra.objects.all()
     serializer_class = LoteCompraSerializer
+
+class VentaViewSet(viewsets.ModelViewSet):
+    queryset = Venta.objects.all()
+    serializer_class = VentaSerializer
