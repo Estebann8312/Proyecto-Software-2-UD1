@@ -1,0 +1,31 @@
+# Entorno virtual de Python
+.venv/
+venv/
+backend/.venv/
+backend/venv/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Variables de entorno
+.env
+.env.*
+
+# Django
+db.sqlite3
+staticfiles/
+media/
+
+# Next.js
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+
+# Editores
+.vscode/
+.idea/
+
+# Sistema
+.DS_Store
+Thumbs.db
