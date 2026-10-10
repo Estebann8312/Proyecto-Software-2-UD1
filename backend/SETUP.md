@@ -1,73 +1,78 @@
-# Guía de configuración del entorno — Backend (Django + PostgreSQL)
+# Guía de configuración del entorno
 
-Sigue estos pasos en orden para dejar tu copia del proyecto funcionando localmente.
+Sistema de inventario y ventas de piezas de computador.
+
+- **Backend:** Django + Django REST Framework + PostgreSQL (carpeta `backend/`)
+- **Frontend:** React (carpeta `frontend/`)
+- **Dependencias de Python:** se manejan con **uv** (archivos `pyproject.toml` y `uv.lock` en la raíz)
+
+> **Importante:** este proyecto ya **no usa** `venv` + `pip` + `requirements.txt`. Si ves instrucciones antiguas con `pip install`, ignóralas.
+
+---
 
 ## 1. Requisitos previos
 
 Instala, si no los tienes:
-- **Python 3.12+** → https://python.org/downloads
-- **PostgreSQL** (incluye pgAdmin) → https://www.postgresql.org/download
+
 - **Git** → https://git-scm.com/downloads
+- **PostgreSQL** (incluye pgAdmin) → https://www.postgresql.org/download
+- **uv** (PowerShell):
+  ```powershell
+  powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+  ```
+  Cierra y vuelve a abrir la terminal, y verifica con:
+  ```powershell
+  uv --version
+  ```
+- **Node.js** (solo si vas a trabajar en el frontend) → https://nodejs.org
+
+No necesitas instalar Python a mano: `uv` descarga la versión que pide el proyecto (`.python-version`).
 
 ## 2. Clonar el repositorio
 
-```bash
+```powershell
 git clone https://github.com/Estebann8312/Proyecto-Software-2-UD1
-cd Proyecto-Software-2-UD1/backend
+cd Proyecto-Software-2-UD1
 ```
 
-## 3. Crear tu propio entorno virtual
+## 3. Instalar las dependencias del backend
 
-**No** uses el `venv` de otra persona — cada quien crea el suyo localmente (por eso no está en el repositorio):
+Desde la **raíz** del proyecto (donde está `pyproject.toml`):
 
-```bash
-python -m venv venv
+```powershell
+uv sync
 ```
 
-Actívalo:
-```bash
-# Windows (PowerShell)
-venv\Scripts\Activate.ps1
+Esto crea la carpeta `.venv` y deja instaladas exactamente las mismas versiones que usa todo el equipo (según `uv.lock`). No hay que activar el entorno: se usa con `uv run`.
 
-# Mac/Linux
-source venv/bin/activate
-```
+## 4. Crear tu base de datos local en PostgreSQL
 
-Confirma que veas `(venv)` al inicio de la línea antes de seguir.
+Cada integrante usa **su propia base de datos local** (no se comparte una entre todos). Para crearla usa el script `backend/crear_bd.sql`:
 
-## 4. Instalar las dependencias del proyecto
+1. Ábrelo y cambia los dos valores de ejemplo:
+   - `django_tunombre` → el usuario que quieras usar.
+   - `cambia_esta_clave` → tu contraseña (evita la ñ y las tildes).
+2. Ejecútalo, con **una** de estas opciones:
+   - **psql** (todo de una vez), desde la carpeta `backend/`:
+     ```powershell
+     psql -U postgres -f crear_bd.sql
+     ```
+   - **pgAdmin** (en dos pasos): ejecuta el bloque *PASO 1* sobre la base `postgres` (una sentencia a la vez) y el bloque *PASO 2* sobre la base `tienda`.
 
-```bash
-pip install -r requirements.txt
-```
+El script crea la base `tienda`, el usuario y los permisos sobre el esquema `public` (necesarios en PostgreSQL 15 o superior; sin ellos las migraciones fallan con "permiso denegado al esquema public").
 
-Esto instala exactamente las mismas librerías (Django, DRF, psycopg2, etc.) que usa el resto del equipo.
+> El script **no crea las tablas**: de eso se encarga Django con `migrate` (paso 6). No uses el antiguo `script-bd-inventario-ventas.sql`, que crea tablas con otros nombres y choca con las de Django.
 
-## 5. Crear tu propia base de datos en PostgreSQL
+## 5. Configurar la conexión
 
-Cada integrante necesita **su propia base de datos local** — no se comparte una sola entre todos. Usando pgAdmin:
-
-1. Abre pgAdmin, conéctate a tu servidor local.
-2. Clic derecho en **Databases → Create → Database...** → nómbrala `tienda`.
-3. Clic derecho en **Login/Group Roles → Create → Login/Group Role...**:
-   - Nombre: `django_tu_nombre` (o el que prefieras)
-   - Pestaña *Definition*: ponle una contraseña.
-   - Pestaña *Privileges*: activa **Can login?**
-4. Dale permisos sobre el esquema: clic derecho en la base `tienda` → **Properties → Security**, agrega tu usuario con todos los privilegios. O, más simple, en el Query Tool:
-   ```sql
-   ALTER SCHEMA public OWNER TO django_tu_nombre;
-   ```
-
-## 6. Configurar la conexión en `settings.py`
-
-Dentro de `Proyecto_UD1/settings.py`, busca `DATABASES` y reemplaza con **tus propios** datos (no los de otro compañero):
+Abre `backend/Proyecto_UD1/settings.py`, busca `DATABASES` y pon **tus** datos:
 
 ```python
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'tienda',
-        'USER': 'django_tu_nombre',
+        'USER': 'django_tunombre',
         'PASSWORD': 'tu_contraseña',
         'HOST': 'localhost',
         'PORT': '5432',
@@ -75,60 +80,106 @@ DATABASES = {
 }
 ```
 
-> ⚠️ Esto genera un conflicto si varios suben su contraseña distinta al mismo `settings.py` — si ves que el archivo ya tiene las credenciales de otra persona, es momento de migrar esto a un archivo `.env` (pendiente en el proyecto). Mientras tanto, simplemente cambia los valores localmente sin subir tu contraseña al commitear (evita hacer `git add` sobre ese archivo si lo modificaste solo con tus credenciales).
+> ⚠️ **No subas tu contraseña al repositorio.** Mientras no migremos las credenciales a un archivo `.env`, evita hacer `git add` de `settings.py` si solo cambiaste estos datos locales.
 
-## 7. Aplicar las migraciones
+Además, confirma que `settings.py` incluya la configuración de CORS (para que el frontend pueda llamar a la API):
 
-Esto crea todas las tablas en tu base de datos local, a partir de los modelos que ya están en el repositorio:
+- `'corsheaders'` en `INSTALLED_APPS`
+- `'corsheaders.middleware.CorsMiddleware'` como **primer** elemento de `MIDDLEWARE`
+- `CORS_ALLOWED_ORIGINS` con el puerto donde corre el frontend (por defecto Vite usa `5173`)
 
-```bash
-python manage.py migrate
+## 6. Crear las tablas
+
+```powershell
+cd backend
+uv run python manage.py migrate
 ```
 
-## 8. Crear tu propio superusuario (para entrar al panel admin)
+## 7. Crear tu superusuario (acceso a `/admin/`)
 
-```bash
-python manage.py createsuperuser
+```powershell
+uv run python manage.py createsuperuser
 ```
 
-## 9. Levantar el servidor
+## 8. Levantar el servidor
 
-```bash
-python manage.py runserver
+```powershell
+uv run python manage.py runserver
 ```
 
-Abre `http://127.0.0.1:8000/admin/` (panel de administración) o `http://127.0.0.1:8000/api/` (API) para confirmar que todo quedó funcionando.
+Prueba en el navegador:
 
-## 10. (Opcional) Poblar tu base de datos con datos de prueba
+- `http://127.0.0.1:8000/admin/` → panel de administración
+- `http://127.0.0.1:8000/api/piezas/` → API (debe responder JSON, aunque sea `[]`)
 
-Si quieres tener datos para probar sin crearlos uno por uno, usa el shell de Django:
-```bash
-python manage.py shell
+> La ruta `http://127.0.0.1:8000/` a secas da 404. Es normal: no hay nada definido en la raíz.
+
+## 9. (Opcional) Cargar datos de prueba
+
+En `backend/` hay un script `poblar_datos.py` con datos de ejemplo. Si el propio script indica otra forma de correrlo, sigue la del script. Si no, una forma que funciona en PowerShell:
+
+```powershell
+Get-Content poblar_datos.py | uv run python manage.py shell
 ```
-Y crea registros de prueba (pídele a Esteban el script que ya usamos para poblar categorías, piezas, proveedores, etc.).
+
+## 10. Frontend (React)
+
+> _Pendiente de completar por quien desarrolló el frontend: comandos para instalar (`npm install`) y levantar (`npm run dev`), y puerto en el que corre._
 
 ---
 
-## Cómo contribuir al código (flujo con ramas)
+## Comandos de uv que vas a usar seguido
 
-**Nunca trabajes directamente sobre `main`.** Antes de empezar cualquier tarea:
+| Qué quieres hacer | Comando (desde la raíz o desde `backend/`) |
+|---|---|
+| Instalar todo lo del proyecto | `uv sync` |
+| Agregar una librería nueva | `uv add nombre-libreria` |
+| Quitar una librería | `uv remove nombre-libreria` |
+| Correr un comando de Django | `uv run python manage.py <comando>` |
 
-```bash
+Cuando agregues una librería con `uv add`, se modifican `pyproject.toml` y `uv.lock`: **commitea ambos** para que el resto del equipo reciba el cambio con un `uv sync`.
+
+## Cómo contribuir (flujo con ramas)
+
+**No trabajes directamente sobre `main`.** Antes de empezar una tarea:
+
+```powershell
 git checkout main
 git pull origin main
 git checkout -b feature/nombre-de-tu-tarea
 ```
 
-Trabaja y haz commits normalmente en tu rama. Cuando termines:
-```bash
+Haz tus commits en esa rama y, al terminar:
+
+```powershell
 git push origin feature/nombre-de-tu-tarea
 ```
 
-Luego abre un **Pull Request** en GitHub hacia `main` para que el equipo lo revise antes de integrarlo.
+Luego abre un **Pull Request** en GitHub hacia `main` para que alguien del equipo lo revise antes de integrarlo.
 
-## Checklist rápido para saber si quedó bien configurado
+Después de hacer `git pull`, si el commit trae cambios en los modelos o en las dependencias, corre:
 
-- [ ] `python manage.py runserver` corre sin errores
-- [ ] `http://127.0.0.1:8000/admin/` carga y puedes iniciar sesión con tu superusuario
-- [ ] `http://127.0.0.1:8000/api/piezas/` muestra una respuesta JSON (aunque esté vacía: `[]`)
-- [ ] `git status` **no** muestra la carpeta `venv/` como archivo nuevo (si aparece, revisa tu `.gitignore`)
+```powershell
+uv sync
+uv run python manage.py migrate
+```
+
+## Problemas frecuentes
+
+| Síntoma | Causa y solución |
+|---|---|
+| `ModuleNotFoundError: No module named 'django'` | Estás usando el Python global. Corre los comandos con `uv run ...` y ejecuta `uv sync` en la raíz. |
+| `permiso denegado al esquema public` al migrar | Falta ejecutar el *PASO 2* de `crear_bd.sql` (permisos sobre el esquema `public`). |
+| `could not connect to server` | PostgreSQL no está corriendo. Revisa en "Servicios" de Windows que esté en ejecución. |
+| Errores de CORS en la consola del navegador | Falta o está mal la configuración de CORS (paso 5), o el puerto del frontend no está en `CORS_ALLOWED_ORIGINS`. |
+| VS Code subraya los `import django` | Selecciona el intérprete `.venv` de la raíz: `Ctrl+Shift+P` → **Python: Select Interpreter**. |
+| Borrar una carpeta `venv` vieja da "Access denied" | Algún proceso la usa. Cierra VS Code y las terminales, y reintenta. La carpeta `backend/venv` del flujo anterior ya no se usa. |
+
+## Checklist final
+
+- [ ] `uv --version` responde
+- [ ] `uv sync` corre sin errores
+- [ ] `uv run python manage.py runserver` levanta el servidor
+- [ ] `/admin/` carga y entras con tu superusuario
+- [ ] `/api/piezas/` responde JSON
+- [ ] `git status` **no** muestra `.venv/` ni `venv/` como archivos nuevos

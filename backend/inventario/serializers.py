@@ -1,5 +1,26 @@
 from rest_framework import serializers
-from .models import CategoriaPieza, Pieza, Proveedor, LoteCompra, Venta, DetalleVenta
+from django.contrib.auth.hashers import make_password
+from .models import (
+    CategoriaPieza, Pieza, Proveedor, LoteCompra,
+    Venta, DetalleVenta, Usuario, Cliente
+)
+
+class UsuarioSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Usuario
+        fields = '__all__'
+        extra_kwargs = {
+            'password': {'write_only': True}
+        }
+
+    def create(self, validated_data):
+        validated_data['password'] = make_password(validated_data['password'])
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        if validated_data.get('password'):
+            validated_data['password'] = make_password(validated_data['password'])
+        return super().update(instance, validated_data)
 
 
 class CategoriaPiezaSerializer(serializers.ModelSerializer):
@@ -67,3 +88,29 @@ class VentaSerializer(serializers.ModelSerializer):
         venta.total = total
         venta.save()
         return venta
+
+class UsuarioSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Usuario
+        fields = '__all__'
+        extra_kwargs = {
+            'password': {'write_only': True}
+        }
+
+    def create(self, validated_data):
+        validated_data['password'] = make_password(validated_data['password'])
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        if validated_data.get('password'):
+            validated_data['password'] = make_password(validated_data['password'])
+        return super().update(instance, validated_data)
+
+
+class ClienteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Cliente
+        fields = '__all__'
+        extra_kwargs = {
+            'password': {'write_only': True}  # para que nunca se devuelva en las respuestas
+        }
