@@ -3,11 +3,12 @@ import "./global.css";
 
 export const metadata: Metadata = {
   title: "PC Stock",
-  description: "Sistema de inventario y ventas de piezas de computador"
+  description:
+    "Sistema de inventario y ventas de piezas de computador",
 };
 
 export default function RootLayout({
-  children
+  children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
