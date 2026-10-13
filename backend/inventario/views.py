@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.hashers import check_password
+from rest_framework import viewsets, mixins
 
 from rest_framework import viewsets
 from .models import CategoriaPieza, Pieza, Proveedor, LoteCompra, Venta, DetalleVenta, Usuario, Cliente
@@ -24,12 +25,15 @@ class ProveedorViewSet(viewsets.ModelViewSet):
     queryset = Proveedor.objects.all()
     serializer_class = ProveedorSerializer
 
-class LoteCompraViewSet(viewsets.ModelViewSet):
-    queryset = LoteCompra.objects.all()
+class LoteCompraViewSet(mixins.CreateModelMixin,mixins.ListModelMixin,
+                        mixins.RetrieveModelMixin,viewsets.GenericViewSet):
+    queryset = LoteCompra.objects.select_related('id_proveedor', 'id_pieza').order_by('-fecha_compra', '-id_lote')
     serializer_class = LoteCompraSerializer
 
-class VentaViewSet(viewsets.ModelViewSet):
-    queryset = Venta.objects.all()
+class VentaViewSet(mixins.CreateModelMixin,mixins.ListModelMixin,
+                   mixins.RetrieveModelMixin,viewsets.GenericViewSet):
+    queryset = Venta.objects.select_related('id_cliente', 'id_vendedor') \
+                            .prefetch_related('detalles__id_pieza').order_by('-fecha')
     serializer_class = VentaSerializer
 
 class UsuarioViewSet(viewsets.ModelViewSet):

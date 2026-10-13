@@ -1,4 +1,5 @@
 from django.db import models
+from django.core.validators import MinValueValidator
 
 
 class Usuario(models.Model):
@@ -58,9 +59,9 @@ class Pieza(models.Model):
         CategoriaPieza, on_delete=models.PROTECT, related_name='piezas'
     )
     condicion = models.CharField(max_length=20, choices=CONDICION_CHOICES)
-    precio_venta = models.DecimalField(max_digits=12, decimal_places=2)
+    precio_venta = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(0)])
     descripcion = models.TextField(blank=True, null=True)
-    stock_actual = models.IntegerField(default=0)
+    stock_actual = models.PositiveIntegerField(default=0)
 
     class Meta:
         verbose_name_plural = "Piezas"
@@ -87,8 +88,8 @@ class LoteCompra(models.Model):
     id_pieza = models.ForeignKey(
         Pieza, on_delete=models.PROTECT, related_name='lotes'
     )
-    cantidad = models.IntegerField()
-    costo_unitario = models.DecimalField(max_digits=12, decimal_places=2)
+    cantidad = models.PositiveIntegerField(validators=[MinValueValidator(1)])
+    costo_unitario = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(0)])
     fecha_compra = models.DateField(auto_now_add=True)
 
     def __str__(self):
@@ -119,8 +120,8 @@ class DetalleVenta(models.Model):
     id_pieza = models.ForeignKey(
         Pieza, on_delete=models.PROTECT, related_name='detalles_venta'
     )
-    cantidad = models.IntegerField()
-    precio_unitario = models.DecimalField(max_digits=12, decimal_places=2)
+    cantidad = models.PositiveIntegerField(validators=[MinValueValidator(1)])
+    precio_unitario = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(0)])
 
     def __str__(self):
         return f"Detalle {self.id_detalle} - Venta {self.id_venta_id}"
