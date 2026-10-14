@@ -1,40 +1,78 @@
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.hashers import check_password
-from rest_framework import viewsets, mixins
+from rest_framework import status, viewsets
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework_simplejwt.tokens import RefreshToken
 
-from rest_framework import viewsets
-from .models import CategoriaPieza, Pieza, Proveedor, LoteCompra, Venta, DetalleVenta, Usuario, Cliente
-from .serializers import (
-    CategoriaPiezaSerializer, PiezaSerializer,
-    ProveedorSerializer, LoteCompraSerializer, VentaSerializer, UsuarioSerializer, ClienteSerializer
+from .models import (
+    Usuario,
+    Cliente,
+    CategoriaPieza,
+    Pieza,
+    Proveedor,
+    LoteCompra,
+    Venta,
 )
+from .serializers import (
+    UsuarioSerializer,
+    ClienteSerializer,
+    CategoriaPiezaSerializer,
+    PiezaSerializer,
+    ProveedorSerializer,
+    LoteCompraSerializer,
+    VentaSerializer,
+    RegisterSerializer,
+)
+
+
+class RegisterView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = RegisterSerializer(data=request.data)
+
+        if serializer.is_valid():
+            user = serializer.save()
+            return Response(
+                {
+                    "message": "Cliente registrado correctamente",
+                    "username": user.username,
+                },
+                status=status.HTTP_201_CREATED,
+            )
+
+        return Response(
+            serializer.errors,
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
 
 class CategoriaPiezaViewSet(viewsets.ModelViewSet):
     queryset = CategoriaPieza.objects.all()
     serializer_class = CategoriaPiezaSerializer
 
+
 class PiezaViewSet(viewsets.ModelViewSet):
     queryset = Pieza.objects.all()
     serializer_class = PiezaSerializer
+
 
 class ProveedorViewSet(viewsets.ModelViewSet):
     queryset = Proveedor.objects.all()
     serializer_class = ProveedorSerializer
 
-class LoteCompraViewSet(mixins.CreateModelMixin,mixins.ListModelMixin,
-                        mixins.RetrieveModelMixin,viewsets.GenericViewSet):
-    queryset = LoteCompra.objects.select_related('id_proveedor', 'id_pieza').order_by('-fecha_compra', '-id_lote')
-    serializer_class = LoteCompraSerializer
 
-class VentaViewSet(mixins.CreateModelMixin,mixins.ListModelMixin,
-                   mixins.RetrieveModelMixin,viewsets.GenericViewSet):
-    queryset = Venta.objects.select_related('id_cliente', 'id_vendedor') \
-                            .prefetch_related('detalles__id_pieza').order_by('-fecha')
+class LoteCompraViewSet(viewsets.ModelViewSet):
+    queryset = LoteCompra.objects.all()
+    serializer_class = LoteCompraSerializer
+    http_method_names = ['get', 'post', 'head', 'options']
+
+
+class VentaViewSet(viewsets.ModelViewSet):
+    queryset = Venta.objects.all()
     serializer_class = VentaSerializer
+    http_method_names = ['get', 'post', 'head', 'options']
 
 class UsuarioViewSet(viewsets.ModelViewSet):
     queryset = Usuario.objects.all()
