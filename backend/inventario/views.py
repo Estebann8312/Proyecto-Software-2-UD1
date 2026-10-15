@@ -28,6 +28,7 @@ from .serializers import (
     LoteCompraSerializer,
     VentaSerializer,
     RegisterSerializer,
+    PiezaPublicSerializer,
 )
 
 
@@ -60,10 +61,22 @@ class CategoriaPiezaViewSet(viewsets.ModelViewSet):
 
 class PiezaViewSet(viewsets.ModelViewSet):
     queryset = Pieza.objects.all()
-    serializer_class = PiezaSerializer
+    
+    def get_serializer_class(self):
+        # 1. Si el usuario está autenticado, comprobamos si es empleado
+        if self.request.user.is_authenticated:
+            email_login = self.request.user.email
+            if email_login:
+                try:
+                    empleado = Usuario.objects.get(email__iexact=email_login)
+                    if empleado.rol in ['vendedor', 'administrador']:
+                        return PiezaSerializer # Administrador/Vendedor ve todo
+                except Usuario.DoesNotExist:
+                    pass
+        
+        # 2. Si es anónimo o cliente, ve el catálogo público
+        return PiezaPublicSerializer
 
-    # Cualquier persona (incluso sin login) puede ver (GET) el catálogo. 
-    # Solo los administradores pueden crear, editar o borrar piezas.
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
             permission_classes = [AllowAny]

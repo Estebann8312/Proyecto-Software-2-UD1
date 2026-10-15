@@ -76,12 +76,6 @@ class CategoriaPiezaSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
-class PiezaSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Pieza
-        fields = "__all__"
-
-
 class ProveedorSerializer(serializers.ModelSerializer):
     class Meta:
         model = Proveedor
@@ -100,6 +94,12 @@ class LoteCompraSerializer(serializers.ModelSerializer):
                 stock_actual=F("stock_actual") + lote.cantidad
             )
         return lote
+
+class PiezaSerializer(serializers.ModelSerializer):
+    lotes = LoteCompraSerializer(many=True, read_only=True)
+    class Meta:
+        model = Pieza
+        fields = "__all__"
 
 
 class DetalleVentaSerializer(serializers.ModelSerializer):
@@ -203,3 +203,27 @@ class ClienteSerializer(serializers.ModelSerializer):
         model = Cliente
         fields = "__all__"
         read_only_fields = ["user"]
+
+class PiezaPublicSerializer(serializers.ModelSerializer):
+    # Opcional: Mostrar el nombre de la categoría en lugar del ID
+    categoria_nombre = serializers.CharField(source='id_categoria.nombre', read_only=True)
+    
+    # En lugar de mostrar 'stock_actual', mostraremos un booleano (True/False)
+    en_stock = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Pieza
+        # AQUI DEFINIMOS SOLO LO QUE QUEREMOS QUE VEA EL PÚBLICO:
+        fields = [
+            'id_pieza', 
+            'nombre', 
+            'categoria_nombre', 
+            'condicion', 
+            'precio_venta', 
+            'descripcion', 
+            'en_stock'
+        ]
+
+    def get_en_stock(self, obj):
+        # Retorna True si hay más de 0, False si está agotado. Oculta el número real.
+        return obj.stock_actual > 0

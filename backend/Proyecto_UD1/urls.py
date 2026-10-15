@@ -48,4 +48,7 @@ urlpatterns = [
         TokenRefreshView.as_view(),
         name="token_refresh",
     ),
+
+    # ---> NUEVO: Login por sesión para el navegador (DRF) <---
+    path("api-auth/", include("rest_framework.urls")),
 ]
