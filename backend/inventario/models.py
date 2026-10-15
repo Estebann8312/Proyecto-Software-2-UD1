@@ -121,6 +121,11 @@ class LoteCompra(models.Model):
 
 
 class Venta(models.Model):
+    ESTADO_CHOICES = [
+        ('activa', 'Activa'),
+        ('anulada', 'Anulada'),
+    ]
+
     id_venta = models.AutoField(primary_key=True)
     id_cliente = models.ForeignKey(
         Cliente, on_delete=models.PROTECT, related_name='ventas'
@@ -132,6 +137,7 @@ class Venta(models.Model):
     metodo_pago = models.CharField(max_length=30)
     total = models.DecimalField(max_digits=12, decimal_places=2)
 
+    estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='activa')
     def __str__(self):
         return f"Venta {self.id_venta} - {self.id_cliente}"
 
