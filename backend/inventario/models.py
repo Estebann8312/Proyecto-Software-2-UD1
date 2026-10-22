@@ -10,12 +10,18 @@ class Usuario(models.Model):
     ]
 
     id_usuario = models.AutoField(primary_key=True)
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="empleado",
+        null=True,
+        blank=True,
+    )
     nombres = models.CharField(max_length=100)
     apellidos = models.CharField(max_length=100)
     documento = models.CharField(max_length=30, unique=True, blank=True, null=True)
     telefono = models.CharField(max_length=20, blank=True, null=True)
     email = models.EmailField(max_length=100, unique=True)
-    password = models.CharField(max_length=255)   # <-- NUEVO, obligatorio (sin blank/null)
     rol = models.CharField(max_length=20, choices=ROL_CHOICES)
     fecha_registro = models.DateTimeField(auto_now_add=True)
 
@@ -121,6 +127,12 @@ class LoteCompra(models.Model):
 
 
 class Venta(models.Model):
+    METODO_PAGO_CHOICES = [
+        ('efectivo', 'Efectivo'),
+        ('tarjeta_debito', 'Tarjeta débito'),
+        ('tarjeta_credito', 'Tarjeta crédito'),
+        ('transferencia', 'Transferencia'),
+    ]
     ESTADO_CHOICES = [
         ('activa', 'Activa'),
         ('anulada', 'Anulada'),
@@ -134,7 +146,7 @@ class Venta(models.Model):
         Usuario, on_delete=models.PROTECT, related_name='ventas'
     )
     fecha = models.DateTimeField(auto_now_add=True)
-    metodo_pago = models.CharField(max_length=30)
+    metodo_pago = models.CharField(max_length=30, choices=METODO_PAGO_CHOICES)
     total = models.DecimalField(max_digits=12, decimal_places=2)
 
     estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='activa')

@@ -16,10 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import include, path
-from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
-    TokenRefreshView,
-)
+from rest_framework_simplejwt.views import TokenRefreshView
 
 
 urlpatterns = [
@@ -27,6 +24,9 @@ urlpatterns = [
     path("admin/", admin.site.urls),
 
     # Rutas de la aplicación inventario:
+    # /api/auth/login/     (JWT + rol, con límite de intentos)
+    # /api/auth/register/
+    # /api/auth/me/
     # /api/auth/register/
     # /api/categorias/
     # /api/piezas/
@@ -35,12 +35,6 @@ urlpatterns = [
     # /api/ventas/
     path("api/", include("inventario.urls")),
 
-    # Login JWT
-    path(
-        "api/auth/login/",
-        TokenObtainPairView.as_view(),
-        name="token_obtain_pair",
-    ),
 
     # Renovar token JWT
     path(
@@ -49,6 +43,6 @@ urlpatterns = [
         name="token_refresh",
     ),
 
-    # ---> NUEVO: Login por sesión para el navegador (DRF) <---
+    # ---> Login por sesión para la API navegable de DRF <---
     path("api-auth/", include("rest_framework.urls")),
 ]

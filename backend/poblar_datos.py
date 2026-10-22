@@ -2,7 +2,7 @@ from datetime import timedelta
 from decimal import Decimal
 import random
 
-from django.contrib.auth.hashers import make_password
+from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils import timezone
 
@@ -16,6 +16,12 @@ from inventario.models import (
     Usuario,
     Venta,
 )
+
+User = get_user_model()
+
+# Contraseñas de prueba (cumplen los validadores de Django)
+PASSWORD_EMPLEADOS = "Empleado.2026"
+PASSWORD_CLIENTES = "Cliente.2026"
 
 print("\n--- Iniciando poblado de datos de prueba ---\n")
 
@@ -327,14 +333,25 @@ with transaction.atomic():
         },
     ]
 
-    usuarios = [Usuario.objects.create(**u) for u in usuarios_data]
+    # Cada empleado tiene su cuenta de acceso (User); el username es la parte
+    # del correo antes de la @ (p. ej. carlos.admin).
+    usuarios = []
+    for u in usuarios_data:
+        cuenta = User.objects.create_user(
+            username=u["email"].split("@")[0],
+            email=u["email"],
+            password=PASSWORD_EMPLEADOS,
+            first_name=u["nombres"],
+            last_name=u["apellidos"],
+        )
+        usuarios.append(Usuario.objects.create(user=cuenta, **u))
+
     vendedores = [u for u in usuarios if u.rol == "vendedor"]
     print(f"✔ {len(usuarios)} Usuarios creados (administradores y vendedores).")
 
     # =========================================================================
     # 5. CLIENTES (9 clientes: 5 con cuenta hasheada y 4 sin registrar)
     # =========================================================================
-    password_hasheada = make_password("cliente123")
 
     clientes_data = [
         # Clientes con cuenta registrada (login activo con password 'cliente123')
@@ -344,7 +361,7 @@ with transaction.atomic():
             "documento": "1094112233",
             "telefono": "3001112233",
             "email": "andres.silva@gmail.com",
-            "password": password_hasheada,
+            "con_cuenta": True,
             "fecha_registro": ahora - timedelta(days=70),
         },
         {
@@ -353,7 +370,7 @@ with transaction.atomic():
             "documento": "1094223344",
             "telefono": "3002223344",
             "email": "mariana.ruiz@hotmail.com",
-            "password": password_hasheada,
+            "con_cuenta": True,
             "fecha_registro": ahora - timedelta(days=55),
         },
         {
@@ -362,7 +379,7 @@ with transaction.atomic():
             "documento": "1094334455",
             "telefono": "3003334455",
             "email": "diego.torres@outlook.com",
-            "password": password_hasheada,
+            "con_cuenta": True,
             "fecha_registro": ahora - timedelta(days=45),
         },
         {
@@ -371,7 +388,7 @@ with transaction.atomic():
             "documento": "1094445566",
             "telefono": "3004445566",
             "email": "vale.morales@gmail.com",
-            "password": password_hasheada,
+            "con_cuenta": True,
             "fecha_registro": ahora - timedelta(days=35),
         },
         {
@@ -380,7 +397,7 @@ with transaction.atomic():
             "documento": "1094556677",
             "telefono": "3005556677",
             "email": "mateo.vargas@yahoo.com",
-            "password": password_hasheada,
+            "con_cuenta": True,
             "fecha_registro": ahora - timedelta(days=20),
         },
         # Clientes sin cuenta (compras directas en tienda física)
@@ -390,7 +407,7 @@ with transaction.atomic():
             "documento": "1094667788",
             "telefono": "3006667788",
             "email": None,
-            "password": None,
+            "con_cuenta": False,
             "fecha_registro": None,
         },
         {
@@ -399,7 +416,7 @@ with transaction.atomic():
             "documento": "1094778899",
             "telefono": "3007778899",
             "email": None,
-            "password": None,
+            "con_cuenta": False,
             "fecha_registro": None,
         },
         {
@@ -408,7 +425,7 @@ with transaction.atomic():
             "documento": "1094889900",
             "telefono": "3008889900",
             "email": None,
-            "password": None,
+            "con_cuenta": False,
             "fecha_registro": None,
         },
         {
@@ -417,13 +434,26 @@ with transaction.atomic():
             "documento": "1094990011",
             "telefono": "3009990011",
             "email": None,
-            "password": None,
+            "con_cuenta": False,
             "fecha_registro": None,
         },
     ]
 
-    clientes = [Cliente.objects.create(**c) for c in clientes_data]
-    print(f"✔ {len(clientes)} Clientes creados (5 con cuenta hasheada, 4 sin cuenta).")
+    clientes = []
+    for c in clientes_data:
+        con_cuenta = c.pop("con_cuenta")
+        c.pop("fecha_registro", None)  # auto_now_add: Django la asigna
+        cuenta = None
+        if con_cuenta:
+            cuenta = User.objects.create_user(
+                username=c["email"].split("@")[0],
+                email=c["email"],
+                password=PASSWORD_CLIENTES,
+                first_name=c["nombres"],
+                last_name=c["apellidos"],
+            )
+        clientes.append(Cliente.objects.create(user=cuenta, **c))
+    print(f"✔ {len(clientes)} Clientes creados (5 con cuenta de acceso, 4 sin cuenta).")
 
     # =========================================================================
     # 6. LOTES DE COMPRA (13 lotes: compras a proveedores en los últimos 2-3 meses)
@@ -598,3 +628,8 @@ print(f"  - Ventas completadas:        {Venta.objects.count()}")
 print(f"  - Detalles de venta:         {DetalleVenta.objects.count()}")
 print("=" * 55)
 print("✔ Base de datos poblada de forma consistente.\n")
+
+print("Credenciales de prueba (username = parte del correo antes de la @):")
+print(f"  Administrador: carlos.admin / {PASSWORD_EMPLEADOS}")
+print(f"  Vendedor:      laura.ventas / {PASSWORD_EMPLEADOS}")
+print(f"  Cliente:       andres.silva / {PASSWORD_CLIENTES}\n")

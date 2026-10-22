@@ -2,6 +2,8 @@ from django.urls import path
 from rest_framework.routers import DefaultRouter
 
 from .views import (
+    LoginView,
+    MeView,
     RegisterView,
     UsuarioViewSet,
     ClienteViewSet,
@@ -23,7 +25,9 @@ router.register(r"lotes", LoteCompraViewSet)
 router.register(r"ventas", VentaViewSet)
 
 urlpatterns = [
+    path("auth/login/", LoginView.as_view(), name="token_obtain_pair"),
     path("auth/register/", RegisterView.as_view(), name="register"),
+    path("auth/me/", MeView.as_view(), name="me"),
 ]
 
 urlpatterns += router.urls

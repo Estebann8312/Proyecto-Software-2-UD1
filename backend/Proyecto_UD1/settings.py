@@ -25,11 +25,17 @@ load_dotenv(BASE_DIR / ".env")
 
 SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
 
-DEBUG = True
+def env_bool(nombre, defecto=False):
+    return os.environ.get(nombre, str(defecto)).strip().lower() in ("1", "true", "yes", "si")
+
+
+# Por seguridad el valor por defecto es False; en desarrollo pon DJANGO_DEBUG=True en .env
+DEBUG = env_bool("DJANGO_DEBUG", False)
 
 ALLOWED_HOSTS = [
-    "localhost",
-    "127.0.0.1",
+    h.strip()
+    for h in os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+    if h.strip()
 ]
 
 
@@ -118,11 +124,22 @@ DATABASES = {
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
-        "rest_framework.authentication.SessionAuthentication", # <-- Agrega esta línea
+        # Sesión: solo para usar la API navegable de DRF desde el navegador.
+        "rest_framework.authentication.SessionAuthentication",
     ),
     "DEFAULT_PERMISSION_CLASSES": (
         "rest_framework.permissions.IsAuthenticated",
     ),
+    "EXCEPTION_HANDLER": "inventario.exceptions.manejador_excepciones",
+    # Límite de intentos (por IP) en login y registro contra fuerza bruta.
+    "DEFAULT_THROTTLE_RATES": {
+        "login": os.environ.get("THROTTLE_LOGIN", "10/min"),
+        "register": os.environ.get("THROTTLE_REGISTER", "5/min"),
+    },
+}
+
+SIMPLE_JWT = {
+    "UPDATE_LAST_LOGIN": True,
 }
 
 
@@ -169,6 +186,17 @@ AUTH_PASSWORD_VALIDATORS = [
         ),
     },
 ]
+
+
+# -------------------------------------------------------------------
+# Cabeceras de seguridad (se activan solo fuera de desarrollo)
+# -------------------------------------------------------------------
+
+if not DEBUG:
+    SESSION_COOKIE_SECURE = env_bool("DJANGO_SECURE_COOKIES", True)
+    CSRF_COOKIE_SECURE = env_bool("DJANGO_SECURE_COOKIES", True)
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = "DENY"
 
 
 # -------------------------------------------------------------------

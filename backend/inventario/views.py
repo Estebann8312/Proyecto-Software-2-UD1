@@ -1,14 +1,13 @@
-from django.contrib.auth.hashers import check_password
-from rest_framework import status, viewsets
-from rest_framework.permissions import AllowAny
-from rest_framework.response import Response
-from rest_framework.views import APIView
-from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework.decorators import action
 from django.db import transaction
-from rest_framework.permissions import IsAuthenticated, AllowAny
-from .permissions import IsAdministrador, IsVendedorOrAdmin, IsClienteOwner
-
+from django.shortcuts import get_object_or_404
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
+from rest_framework.views import APIView
+from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .models import (
     Usuario,
@@ -19,165 +18,218 @@ from .models import (
     LoteCompra,
     Venta,
 )
+from .permissions import (
+    IsAdministrador,
+    IsVendedorOrAdmin,
+    LecturaEmpleadoEscrituraAdmin,
+    get_empleado,
+)
 from .serializers import (
     UsuarioSerializer,
     ClienteSerializer,
     CategoriaPiezaSerializer,
     PiezaSerializer,
+    PiezaPublicSerializer,
     ProveedorSerializer,
     LoteCompraSerializer,
     VentaSerializer,
     RegisterSerializer,
-    PiezaPublicSerializer,
+    TokenConRolSerializer,
 )
 
 
+# ---------------------------------------------------------------------------
+# Autenticación
+# ---------------------------------------------------------------------------
+
+class LoginView(TokenObtainPairView):
+    """POST /api/auth/login/ → access, refresh y rol. Limitado contra fuerza bruta."""
+
+    serializer_class = TokenConRolSerializer
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "login"
+
+
 class RegisterView(APIView):
+    """POST /api/auth/register/ → crea siempre un CLIENTE."""
+
     permission_classes = [AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "register"
 
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
-
-        if serializer.is_valid():
-            user = serializer.save()
-            return Response(
-                {
-                    "message": "Cliente registrado correctamente",
-                    "username": user.username,
-                },
-                status=status.HTTP_201_CREATED,
-            )
-
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
         return Response(
-            serializer.errors,
-            status=status.HTTP_400_BAD_REQUEST,
+            {"message": "Cliente registrado correctamente", "username": user.username},
+            status=status.HTTP_201_CREATED,
         )
 
 
+class MeView(APIView):
+    """GET /api/auth/me/ → datos básicos y rol del usuario autenticado (útil para el frontend)."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        empleado = get_empleado(user)
+        if empleado:
+            rol, id_usuario, id_cliente = empleado.rol, empleado.id_usuario, None
+        else:
+            cliente = Cliente.objects.filter(user=user).first()
+            rol, id_usuario = "cliente", None
+            id_cliente = cliente.id_cliente if cliente else None
+        return Response({
+            "username": user.username,
+            "email": user.email,
+            "nombres": user.first_name,
+            "apellidos": user.last_name,
+            "rol": rol,
+            "id_usuario": id_usuario,
+            "id_cliente": id_cliente,
+        })
+
+
+# ---------------------------------------------------------------------------
+# Catálogo
+# ---------------------------------------------------------------------------
+
 class CategoriaPiezaViewSet(viewsets.ModelViewSet):
-    queryset = CategoriaPieza.objects.all()
+    """Lectura pública (filtros del catálogo); escritura solo administrador."""
+
+    queryset = CategoriaPieza.objects.all().order_by("nombre")
     serializer_class = CategoriaPiezaSerializer
+
+    def get_permissions(self):
+        if self.action in ("list", "retrieve"):
+            return [AllowAny()]
+        return [IsAdministrador()]
 
 
 class PiezaViewSet(viewsets.ModelViewSet):
-    queryset = Pieza.objects.all()
-    
+    """Lectura pública (catálogo reducido); empleados ven todo; escritura solo administrador."""
+
+    queryset = (
+        Pieza.objects.select_related("id_categoria")
+        .prefetch_related("lotes")
+        .order_by("id_pieza")
+    )
+
     def get_serializer_class(self):
-        # 1. Si el usuario está autenticado, comprobamos si es empleado
-        if self.request.user.is_authenticated:
-            email_login = self.request.user.email
-            if email_login:
-                try:
-                    empleado = Usuario.objects.get(email__iexact=email_login)
-                    if empleado.rol in ['vendedor', 'administrador']:
-                        return PiezaSerializer # Administrador/Vendedor ve todo
-                except Usuario.DoesNotExist:
-                    pass
-        
-        # 2. Si es anónimo o cliente, ve el catálogo público
+        if get_empleado(self.request.user):
+            return PiezaSerializer
         return PiezaPublicSerializer
 
     def get_permissions(self):
-        if self.action in ['list', 'retrieve']:
-            permission_classes = [AllowAny]
-        else:
-            permission_classes = [IsAdministrador]
-        return [permission() for permission in permission_classes]
+        if self.action in ("list", "retrieve"):
+            return [AllowAny()]
+        return [IsAdministrador()]
 
 
 class ProveedorViewSet(viewsets.ModelViewSet):
-    queryset = Proveedor.objects.all()
+    queryset = Proveedor.objects.all().order_by("nombre")
     serializer_class = ProveedorSerializer
+    permission_classes = [LecturaEmpleadoEscrituraAdmin]
 
 
 class LoteCompraViewSet(viewsets.ModelViewSet):
-    queryset = LoteCompra.objects.all()
-    serializer_class = LoteCompraSerializer
-    http_method_names = ['get', 'post', 'head', 'options']
+    """Los lotes son el historial de entradas: solo se crean y consultan."""
 
-    # El inventario y costos de proveedor son sensibles. Solo el Administrador ingresa lotes.
+    queryset = LoteCompra.objects.select_related("id_pieza", "id_proveedor").order_by("-id_lote")
+    serializer_class = LoteCompraSerializer
+    http_method_names = ["get", "post", "head", "options"]
     permission_classes = [IsAdministrador]
 
 
+
+# ---------------------------------------------------------------------------
+# Ventas
+# ---------------------------------------------------------------------------
+
 class VentaViewSet(viewsets.ModelViewSet):
-    queryset = Venta.objects.all()
+    """Las ventas solo se crean, consultan y anulan (nunca se editan ni borran)."""
+
+    queryset = (
+        Venta.objects.select_related("id_cliente", "id_vendedor")
+        .prefetch_related("detalles__id_pieza")
+        .order_by("-fecha")
+    )
     serializer_class = VentaSerializer
-    http_method_names = ['get', 'post', 'head', 'options']
+    http_method_names = ["get", "post", "head", "options"]
 
-    # Solo empleados registrados pueden registrar o anular ventas.
-    # Los clientes no pueden autogenerar ventas desde la API sin pasar por el vendedor en este diseño.
-    permission_classes = [IsVendedorOrAdmin]
+    def get_permissions(self):
+        if self.action == "anular":
+            return [IsAdministrador()]
+        return [IsVendedorOrAdmin()]
 
-    @action(detail=True, methods=['post'])
+    def perform_create(self, serializer):
+        # El vendedor es SIEMPRE quien está autenticado; no se acepta desde el cliente.
+        serializer.save(id_vendedor=get_empleado(self.request.user))
+
+    @action(detail=True, methods=["post"])
     def anular(self, request, pk=None):
-        # Usamos atomic para asegurar que si falla la devolución de una pieza, no se anule la venta.
         with transaction.atomic():
-            # 1. Obtenemos la venta y la bloqueamos para que no puedan presionar "Anular" dos veces rápido
-            venta = Venta.objects.select_for_update().get(pk=pk)
+            # Bloqueo de la venta para evitar doble anulación simultánea.
+            venta = get_object_or_404(Venta.objects.select_for_update(), pk=pk)
 
-            if venta.estado == 'anulada':
+            if venta.estado == "anulada":
                 return Response(
-                    {'error': 'Esta venta ya se encuentra anulada.'}, 
-                    status=status.HTTP_400_BAD_REQUEST
+                    {"error": "Esta venta ya se encuentra anulada."},
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
 
-            # 2. Cambiamos el estado de la venta
-            venta.estado = 'anulada'
-            venta.save(update_fields=['estado'])
+            venta.estado = "anulada"
+            venta.save(update_fields=["estado"])
 
-            # 3. Recuperamos los detalles y bloqueamos las piezas ordenadas por PK (igual que hiciste en la creación)
-            detalles = venta.detalles.all()
-            piezas_ids = [detalle.id_pieza_id for detalle in detalles]
-            
+            detalles = list(venta.detalles.all())
             piezas_bloqueadas = {
-                p.pk: p for p in Pieza.objects.select_for_update().filter(pk__in=piezas_ids).order_by('pk')
+                p.pk: p
+                for p in Pieza.objects.select_for_update()
+                .filter(pk__in=[d.id_pieza_id for d in detalles])
+                .order_by("pk")
             }
-
-            # 4. Devolvemos el stock a cada pieza
             for detalle in detalles:
                 pieza = piezas_bloqueadas[detalle.id_pieza_id]
                 pieza.stock_actual += detalle.cantidad
-                pieza.save(update_fields=['stock_actual'])
+                pieza.save(update_fields=["stock_actual"])
 
         return Response(
-            {'mensaje': f'Venta {venta.id_venta} anulada exitosamente y stock devuelto.'}, 
-            status=status.HTTP_200_OK
+            {"mensaje": f"Venta {venta.id_venta} anulada exitosamente y stock devuelto."},
+            status=status.HTTP_200_OK,
         )
 
+
+# ---------------------------------------------------------------------------
+# Personas
+# ---------------------------------------------------------------------------
+
 class UsuarioViewSet(viewsets.ModelViewSet):
-    queryset = Usuario.objects.all()
+    """Gestión de empleados: exclusivamente administradores."""
+
+    queryset = Usuario.objects.select_related("user").order_by("id_usuario")
     serializer_class = UsuarioSerializer
+    permission_classes = [IsAdministrador]
+
+    @transaction.atomic
+    def perform_destroy(self, instance):
+        if instance.user_id == self.request.user.pk:
+            raise ValidationError({"error": "No puedes eliminar tu propia cuenta."})
+        user = instance.user
+        instance.delete()  # ProtectedError (→ 409) si tiene ventas registradas
+        if user is not None:
+            user.delete()
 
 
 class ClienteViewSet(viewsets.ModelViewSet):
-    queryset = Cliente.objects.all()
+    queryset = Cliente.objects.all().order_by("id_cliente")
     serializer_class = ClienteSerializer
-
-    # Los vendedores y administradores pueden ver la lista de clientes.
-    # Un cliente individual podría requerir permisos especiales más adelante.
     permission_classes = [IsVendedorOrAdmin]
 
-
-class LoginUsuarioView(APIView):
-    def post(self, request):
-        email = request.data.get('email')
-        password = request.data.get('password')
-
-        try:
-            usuario = Usuario.objects.get(email=email)
-        except Usuario.DoesNotExist:
-            return Response({'error': 'Credenciales inválidas'}, status=status.HTTP_401_UNAUTHORIZED)
-
-        if not check_password(password, usuario.password):
-            return Response({'error': 'Credenciales inválidas'}, status=status.HTTP_401_UNAUTHORIZED)
-
-        token = RefreshToken()
-        token['id_usuario'] = usuario.id_usuario
-        token['rol'] = usuario.rol
-
-        return Response({
-            'access': str(token.access_token),
-            'id_usuario': usuario.id_usuario,
-            'nombres': usuario.nombres,
-            'rol': usuario.rol,
-        }, status=status.HTTP_200_OK)
+    @transaction.atomic
+    def perform_destroy(self, instance):
+        user = instance.user
+        instance.delete()  # ProtectedError (→ 409) si tiene ventas registradas
+        if user is not None:
+            user.delete()  # que no quede una cuenta huérfana con acceso

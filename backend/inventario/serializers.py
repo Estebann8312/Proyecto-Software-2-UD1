@@ -1,11 +1,12 @@
-from django.contrib.auth import get_user_model
-from django.contrib.auth.hashers import make_password
 from decimal import Decimal
+
+from django.contrib.auth import get_user_model
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
 from django.db.models import F
-from django.db import transaction
 from rest_framework import serializers
-
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from .models import (
     Usuario,
@@ -17,30 +18,98 @@ from .models import (
     DetalleVenta,
     Cliente,
 )
+from .permissions import get_empleado
 
 User = get_user_model()
 
 
+# ---------------------------------------------------------------------------
+# Utilidades de validación compartidas
+# ---------------------------------------------------------------------------
+
+def normalizar_email(value):
+    return value.strip().lower()
+
+
+def email_en_uso(email, excluir_user=None, excluir_cliente=None, excluir_usuario=None):
+    """True si el email ya existe en User, Cliente o Usuario (sin distinguir mayúsculas)."""
+    users = User.objects.filter(email__iexact=email)
+    clientes = Cliente.objects.filter(email__iexact=email)
+    empleados = Usuario.objects.filter(email__iexact=email)
+    if excluir_user is not None:
+        users = users.exclude(pk=excluir_user.pk)
+    if excluir_cliente is not None:
+        clientes = clientes.exclude(pk=excluir_cliente.pk)
+    if excluir_usuario is not None:
+        empleados = empleados.exclude(pk=excluir_usuario.pk)
+    return users.exists() or clientes.exists() or empleados.exists()
+
+
+def validar_password(password, user=None):
+    """Aplica AUTH_PASSWORD_VALIDATORS de settings y devuelve errores de DRF."""
+    try:
+        validate_password(password, user=user)
+    except DjangoValidationError as e:
+        raise serializers.ValidationError(list(e.messages))
+    return password
+
+
+# ---------------------------------------------------------------------------
+# Autenticación
+# ---------------------------------------------------------------------------
+
+class TokenConRolSerializer(TokenObtainPairSerializer):
+    """Login JWT que además incluye el rol en el token y en la respuesta."""
+
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+        empleado = get_empleado(user)
+        token["rol"] = empleado.rol if empleado else "cliente"
+        return token
+
+    def validate(self, attrs):
+        data = super().validate(attrs)
+        empleado = get_empleado(self.user)
+        data["rol"] = empleado.rol if empleado else "cliente"
+        return data
+
+
 class RegisterSerializer(serializers.Serializer):
+    """Registro público: SIEMPRE crea un cliente, nunca un empleado."""
+
     username = serializers.CharField(max_length=150)
     email = serializers.EmailField()
-    password = serializers.CharField(write_only=True, min_length=8)
+    password = serializers.CharField(write_only=True)
     first_name = serializers.CharField(max_length=150)
     last_name = serializers.CharField(max_length=150)
     documento = serializers.CharField(max_length=30, required=False, allow_blank=True)
     telefono = serializers.CharField(max_length=20, required=False, allow_blank=True)
 
     def validate_username(self, value):
-        if User.objects.filter(username=value).exists():
+        value = value.strip()
+        if User.objects.filter(username__iexact=value).exists():
             raise serializers.ValidationError("Ese nombre de usuario ya existe.")
         return value
 
     def validate_email(self, value):
-        if User.objects.filter(email=value).exists():
+        value = normalizar_email(value)
+        if email_en_uso(value):
             raise serializers.ValidationError("Ese correo ya está registrado.")
-        if Cliente.objects.filter(email=value).exists():
-            raise serializers.ValidationError("Ese correo ya está registrado como cliente.")
         return value
+
+    def validate(self, attrs):
+        usuario_tmp = User(
+            username=attrs.get("username"),
+            email=attrs.get("email"),
+            first_name=attrs.get("first_name"),
+            last_name=attrs.get("last_name"),
+        )
+        try:
+            validar_password(attrs["password"], user=usuario_tmp)
+        except serializers.ValidationError as e:
+            raise serializers.ValidationError({"password": e.detail})
+        return attrs
 
     @transaction.atomic
     def create(self, validated_data):
@@ -53,9 +122,6 @@ class RegisterSerializer(serializers.Serializer):
             password=validated_data["password"],
             first_name=validated_data["first_name"],
             last_name=validated_data["last_name"],
-            is_active=True,
-            is_staff=False,
-            is_superuser=False,
         )
 
         Cliente.objects.create(
@@ -66,9 +132,13 @@ class RegisterSerializer(serializers.Serializer):
             telefono=telefono or None,
             email=validated_data["email"],
         )
-
         return user
 
+
+
+# ---------------------------------------------------------------------------
+# Catálogo
+# ---------------------------------------------------------------------------
 
 class CategoriaPiezaSerializer(serializers.ModelSerializer):
     class Meta:
@@ -87,20 +157,53 @@ class LoteCompraSerializer(serializers.ModelSerializer):
         model = LoteCompra
         fields = "__all__"
 
+    @transaction.atomic
     def create(self, validated_data):
-        with transaction.atomic():
-            lote = super().create(validated_data)
-            Pieza.objects.filter(pk=lote.id_pieza_id).update(
-                stock_actual=F("stock_actual") + lote.cantidad
-            )
+        lote = super().create(validated_data)
+        Pieza.objects.filter(pk=lote.id_pieza_id).update(
+            stock_actual=F("stock_actual") + lote.cantidad
+        )
         return lote
 
+
 class PiezaSerializer(serializers.ModelSerializer):
+    """Vista completa para empleados (incluye stock real y lotes con costos)."""
+
     lotes = LoteCompraSerializer(many=True, read_only=True)
+
     class Meta:
         model = Pieza
         fields = "__all__"
+        # El stock solo cambia por lotes (entradas) y ventas/anulaciones (salidas),
+        # así siempre cuadra con el historial.
+        read_only_fields = ["stock_actual"]
 
+
+class PiezaPublicSerializer(serializers.ModelSerializer):
+    """Catálogo público: sin stock exacto ni costos de proveedor."""
+
+    categoria_nombre = serializers.CharField(source="id_categoria.nombre", read_only=True)
+    en_stock = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Pieza
+        fields = [
+            "id_pieza",
+            "nombre",
+            "categoria_nombre",
+            "condicion",
+            "precio_venta",
+            "descripcion",
+            "en_stock",
+        ]
+
+    def get_en_stock(self, obj):
+        return obj.stock_actual > 0
+
+
+# ---------------------------------------------------------------------------
+# Ventas
+# ---------------------------------------------------------------------------
 
 class DetalleVentaSerializer(serializers.ModelSerializer):
     pieza_nombre = serializers.CharField(source="id_pieza.nombre", read_only=True)
@@ -127,9 +230,11 @@ class VentaSerializer(serializers.ModelSerializer):
             "fecha",
             "metodo_pago",
             "total",
+            "estado",
             "detalles",
         ]
-        read_only_fields = ["total", "fecha"]
+        # id_vendedor lo asigna la vista con el empleado autenticado.
+        read_only_fields = ["id_vendedor", "total", "fecha", "estado"]
 
     def validate_detalles(self, value):
         if not value:
@@ -146,6 +251,7 @@ class VentaSerializer(serializers.ModelSerializer):
 
         with transaction.atomic():
             ids = [d["id_pieza"].pk for d in detalles_data]
+            # Bloqueo ordenado por PK para evitar interbloqueos entre ventas simultáneas.
             piezas = {
                 p.pk: p
                 for p in Pieza.objects.select_for_update().filter(pk__in=ids).order_by("pk")
@@ -180,22 +286,96 @@ class VentaSerializer(serializers.ModelSerializer):
         return venta
 
 
+
+# ---------------------------------------------------------------------------
+# Personas
+# ---------------------------------------------------------------------------
+
 class UsuarioSerializer(serializers.ModelSerializer):
+    """
+    Gestión de empleados (solo administrador).
+    Crear un empleado crea también su cuenta de acceso (User) en una sola transacción.
+    """
+
+    username = serializers.CharField(source="user.username", max_length=150)
+    password = serializers.CharField(write_only=True, required=False)
+
     class Meta:
         model = Usuario
-        fields = "__all__"
-        extra_kwargs = {
-            "password": {"write_only": True}
-        }
+        fields = [
+            "id_usuario",
+            "username",
+            "password",
+            "nombres",
+            "apellidos",
+            "documento",
+            "telefono",
+            "email",
+            "rol",
+            "fecha_registro",
+        ]
+        read_only_fields = ["fecha_registro"]
 
+    def validate_email(self, value):
+        value = normalizar_email(value)
+        instancia = self.instance
+        if email_en_uso(
+            value,
+            excluir_user=instancia.user if instancia else None,
+            excluir_usuario=instancia,
+        ):
+            raise serializers.ValidationError("Ese correo ya está registrado.")
+        return value
+
+    def validate_username(self, value):
+        value = value.strip()
+        qs = User.objects.filter(username__iexact=value)
+        if self.instance and self.instance.user:
+            qs = qs.exclude(pk=self.instance.user.pk)
+        if qs.exists():
+            raise serializers.ValidationError("Ese nombre de usuario ya existe.")
+        return value
+
+    def validate(self, attrs):
+        if self.instance is None and not attrs.get("password"):
+            raise serializers.ValidationError({"password": "La contraseña es obligatoria."})
+        if attrs.get("password"):
+            try:
+                validar_password(attrs["password"])
+            except serializers.ValidationError as e:
+                raise serializers.ValidationError({"password": e.detail})
+        return attrs
+
+    @transaction.atomic
     def create(self, validated_data):
-        validated_data["password"] = make_password(validated_data["password"])
-        return super().create(validated_data)
+        user_data = validated_data.pop("user")
+        password = validated_data.pop("password")
+        user = User.objects.create_user(
+            username=user_data["username"],
+            email=validated_data["email"],
+            password=password,
+            first_name=validated_data["nombres"][:150],
+            last_name=validated_data["apellidos"][:150],
+        )
+        return Usuario.objects.create(user=user, **validated_data)
 
+    @transaction.atomic
     def update(self, instance, validated_data):
-        if validated_data.get("password"):
-            validated_data["password"] = make_password(validated_data["password"])
-        return super().update(instance, validated_data)
+        user_data = validated_data.pop("user", {})
+        password = validated_data.pop("password", None)
+        instance = super().update(instance, validated_data)
+
+        user = instance.user
+        if user is not None:
+            if "username" in user_data:
+                user.username = user_data["username"]
+            user.email = instance.email
+            user.first_name = instance.nombres[:150]
+            user.last_name = instance.apellidos[:150]
+            if password:
+                user.set_password(password)
+            user.save()
+        return instance
 
 
 class ClienteSerializer(serializers.ModelSerializer):
@@ -204,26 +384,15 @@ class ClienteSerializer(serializers.ModelSerializer):
         fields = "__all__"
         read_only_fields = ["user"]
 
-class PiezaPublicSerializer(serializers.ModelSerializer):
-    # Opcional: Mostrar el nombre de la categoría en lugar del ID
-    categoria_nombre = serializers.CharField(source='id_categoria.nombre', read_only=True)
-    
-    # En lugar de mostrar 'stock_actual', mostraremos un booleano (True/False)
-    en_stock = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Pieza
-        # AQUI DEFINIMOS SOLO LO QUE QUEREMOS QUE VEA EL PÚBLICO:
-        fields = [
-            'id_pieza', 
-            'nombre', 
-            'categoria_nombre', 
-            'condicion', 
-            'precio_venta', 
-            'descripcion', 
-            'en_stock'
-        ]
-
-    def get_en_stock(self, obj):
-        # Retorna True si hay más de 0, False si está agotado. Oculta el número real.
-        return obj.stock_actual > 0
+    def validate_email(self, value):
+        if not value:
+            return None
+        value = normalizar_email(value)
+        instancia = self.instance
+        if email_en_uso(
+            value,
+            excluir_user=instancia.user if instancia else None,
+            excluir_cliente=instancia,
+        ):
+            raise serializers.ValidationError("Ese correo ya está registrado.")
+        return value

@@ -63,30 +63,24 @@ El script crea la base `tienda`, el usuario y los permisos sobre el esquema `pub
 
 > El script **no crea las tablas**: de eso se encarga Django con `migrate` (paso 6). No uses el antiguo `script-bd-inventario-ventas.sql`, que crea tablas con otros nombres y choca con las de Django.
 
-## 5. Configurar la conexión
+## 5. Configurar la conexión (`.env`)
 
-Abre `backend/Proyecto_UD1/settings.py`, busca `DATABASES` y pon **tus** datos:
+La configuración ya **no** se edita en `settings.py`: se lee del archivo `backend/.env`, que no se sube al repositorio.
 
-```python
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'tienda',
-        'USER': 'django_tunombre',
-        'PASSWORD': 'tu_contraseña',
-        'HOST': 'localhost',
-        'PORT': '5432',
-    }
-}
+```powershell
+cd backend
+copy .env.example .env
 ```
 
-> ⚠️ **No subas tu contraseña al repositorio.** Mientras no migremos las credenciales a un archivo `.env`, evita hacer `git add` de `settings.py` si solo cambiaste estos datos locales.
+Abre `backend/.env` y pon **tus** datos (los mismos del paso 4). Para desarrollo deja `DJANGO_DEBUG=True`; si lo omites, Django arranca con `DEBUG=False` por seguridad y el panel `/admin/` se verá sin estilos.
 
-Además, confirma que `settings.py` incluya la configuración de CORS (para que el frontend pueda llamar a la API):
+Para generar una `DJANGO_SECRET_KEY`:
 
-- `'corsheaders'` en `INSTALLED_APPS`
-- `'corsheaders.middleware.CorsMiddleware'` como **primer** elemento de `MIDDLEWARE`
-- `CORS_ALLOWED_ORIGINS` con el puerto donde corre el frontend (por defecto Vite usa `5173`)
+```powershell
+uv run python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+```
+
+La configuración de CORS ya viene incluida en `settings.py` (puertos 3000 y 5173).
 
 ## 6. Crear las tablas
 
@@ -100,6 +94,7 @@ uv run python manage.py migrate
 ```powershell
 uv run python manage.py createsuperuser
 ```
+> El superusuario sirve para el panel `/admin/` de Django, pero **no tiene rol en la API**. Para que un usuario sea administrador o vendedor en la API, debe existir un registro `Usuario` vinculado a su cuenta (campo `user`). Lo más fácil es cargar los datos de prueba (paso 9) o, ya con un administrador, crear empleados con `POST /api/usuarios/`.
 
 ## 8. Levantar el servidor
 
@@ -119,8 +114,37 @@ Prueba en el navegador:
 En `backend/` hay un script `poblar_datos.py` con datos de ejemplo. Si el propio script indica otra forma de correrlo, sigue la del script. Si no, una forma que funciona en PowerShell:
 
 ```powershell
-Get-Content poblar_datos.py | uv run python manage.py shell
+$env:PYTHONUTF8=1
+uv run python manage.py shell -c "exec(open('poblar_datos.py', encoding='utf-8').read())"
 ```
+
+> No uses `Get-Content poblar_datos.py | ... shell`: PowerShell envía el archivo línea por línea y falla con `IndentationError`.
+
+El script crea cuentas listas para probar (el *username* es la parte del correo antes de la `@`):
+
+| Rol | Username | Contraseña |
+|---|---|---|
+| Administrador | `carlos.admin` | `Empleado.2026` |
+| Vendedor | `laura.ventas` | `Empleado.2026` |
+| Cliente | `andres.silva` | `Cliente.2026` |
+
+> Ejecútalo sobre una base **vacía**. Para vaciarla: `uv run python manage.py flush --no-input` (borra todos los datos, incluido el superusuario).
+
+## 9.1 Correr las pruebas
+
+La primera vez, dale a tu usuario permiso para crear la base temporal de pruebas. En pgAdmin, Query Tool sobre la base `postgres`:
+
+```sql
+ALTER USER django_tunombre CREATEDB;
+```
+
+Luego:
+
+```powershell
+uv run python manage.py test inventario
+```
+
+Todas deben pasar antes de abrir un Pull Request.
 
 ## 10. Frontend (React)
 
@@ -174,6 +198,9 @@ uv run python manage.py migrate
 | Errores de CORS en la consola del navegador | Falta o está mal la configuración de CORS (paso 5), o el puerto del frontend no está en `CORS_ALLOWED_ORIGINS`. |
 | VS Code subraya los `import django` | Selecciona el intérprete `.venv` de la raíz: `Ctrl+Shift+P` → **Python: Select Interpreter**. |
 | Borrar una carpeta `venv` vieja da "Access denied" | Algún proceso la usa. Cierra VS Code y las terminales, y reintenta. La carpeta `backend/venv` del flujo anterior ya no se usa. |
+| `KeyError: 'DJANGO_SECRET_KEY'` (o `DB_NAME`) | Falta el archivo `backend/.env` o le falta esa variable (paso 5). |
+| `permission denied to create database` al correr pruebas | Falta el permiso del paso 9.1: `ALTER USER django_tunombre CREATEDB;` |
+| `IndentationError` al cargar datos de prueba | Usaste `Get-Content ... \|`. Usa el comando con `exec(...)` del paso 9. |
 
 ## Checklist final
 
