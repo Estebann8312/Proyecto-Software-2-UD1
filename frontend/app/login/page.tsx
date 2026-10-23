@@ -1,140 +1,88 @@
 "use client";
 
-import {
-  FormEvent,
-  useEffect,
-  useState,
-} from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-import {
-  isAuthenticated,
-  login,
-} from "../../lib/api";
+import PanelAcceso from "../../components/PanelAcceso";
+import { Aviso, Campo } from "../../components/ui";
+import { useSession } from "../../lib/session";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { estado, iniciarSesion } = useSession();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [checking, setChecking] = useState(true);
+  const [enviando, setEnviando] = useState(false);
 
+  // Si ya hay sesión, no tiene sentido mostrar el login.
   useEffect(() => {
-    if (isAuthenticated()) {
-      router.replace("/dashboard");
-      return;
-    }
+    if (estado === "autenticado") router.replace("/dashboard");
+  }, [estado, router]);
 
-    setChecking(false);
-  }, [router]);
-
-  async function handleSubmit(
-    event: FormEvent<HTMLFormElement>
-  ) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-
     setError("");
-    setLoading(true);
-
+    setEnviando(true);
     try {
-      await login(username, password);
+      await iniciarSesion(username.trim(), password);
       router.replace("/dashboard");
-    } catch (error) {
-      setError(
-        error instanceof Error
-          ? error.message
-          : "No se pudo iniciar sesión"
-      );
-    } finally {
-      setLoading(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No se pudo iniciar sesión.");
+      setEnviando(false);
     }
-  }
-
-  if (checking) {
-    return (
-      <main className="loading-page">
-        Cargando...
-      </main>
-    );
   }
 
   return (
-    <main className="login-page">
-      <section className="login-card">
-        <div className="login-logo">PC</div>
+    <main className="acceso">
+      <section className="acceso-form">
+        <div className="acceso-form-interior">
+          <Link href="/login" className="marca">PC Stock</Link>
 
-        <h1>Iniciar sesión</h1>
+          <h1>Iniciar sesión</h1>
+          <p className="intro">Entra con el usuario que te asignó la tienda o con tu cuenta de cliente.</p>
 
-        <p className="login-subtitle">
-          Sistema de inventario y ventas
-        </p>
+          <form className="formulario" onSubmit={handleSubmit}>
+            <Campo id="username" etiqueta="Usuario">
+              <input
+                id="username"
+                className="control"
+                autoComplete="username"
+                autoCapitalize="none"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+              />
+            </Campo>
 
-        <form
-          className="login-form"
-          onSubmit={handleSubmit}
-        >
-          <div className="form-group">
-            <label htmlFor="username">
-              Usuario
-            </label>
+            <Campo id="password" etiqueta="Contraseña">
+              <input
+                id="password"
+                className="control"
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </Campo>
 
-            <input
-              id="username"
-              type="text"
-              value={username}
-              onChange={(event) =>
-                setUsername(event.target.value)
-              }
-              required
-            />
-          </div>
+            <Aviso texto={error} />
 
-          <div className="form-group">
-            <label htmlFor="password">
-              Contraseña
-            </label>
+            <button type="submit" className="boton bloque" disabled={enviando}>
+              {enviando ? "Entrando…" : "Iniciar sesión"}
+            </button>
+          </form>
 
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(event) =>
-                setPassword(event.target.value)
-              }
-              required
-            />
-          </div>
-
-          {error && (
-            <div
-              className="login-error"
-              role="alert"
-            >
-              {error}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            className="login-button"
-            disabled={loading}
-          >
-            {loading
-              ? "Ingresando..."
-              : "Iniciar sesión"}
-          </button>
-        </form>
-
-        <p className="register-link">
-          ¿No tienes una cuenta?{" "}
-          <Link href="/register">
-            Crear cuenta
-          </Link>
-        </p>
+          <p className="acceso-pie">
+            ¿Vas a comprar y no tienes cuenta? <Link href="/register">Crear cuenta de cliente</Link>
+          </p>
+        </div>
       </section>
+
+      <PanelAcceso />
     </main>
   );
 }

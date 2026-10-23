@@ -1,227 +1,114 @@
 "use client";
 
-import {
-  FormEvent,
-  useState,
-} from "react";
+import { ChangeEvent, FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
+import PanelAcceso from "../../components/PanelAcceso";
+import { Aviso, Campo } from "../../components/ui";
 import { register } from "../../lib/api";
+import { useSession } from "../../lib/session";
+
+const VACIO = {
+  first_name: "",
+  last_name: "",
+  documento: "",
+  telefono: "",
+  email: "",
+  username: "",
+  password: "",
+};
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { iniciarSesion } = useSession();
 
-  const [form, setForm] = useState({
-    username: "",
-    email: "",
-    password: "",
-    first_name: "",
-    last_name: "",
-    documento: "",
-    telefono: "",
-  });
-
+  const [form, setForm] = useState(VACIO);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [enviando, setEnviando] = useState(false);
 
-  function handleChange(
-    event: React.ChangeEvent<HTMLInputElement>
-  ) {
+  function cambiar(event: ChangeEvent<HTMLInputElement>) {
     const { name, value } = event.target;
-
-    setForm((currentForm) => ({
-      ...currentForm,
-      [name]: value,
-    }));
+    setForm((actual) => ({ ...actual, [name]: value }));
   }
 
-  async function handleSubmit(
-    event: FormEvent<HTMLFormElement>
-  ) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-
     setError("");
-    setSuccess("");
-    setLoading(true);
-
+    setEnviando(true);
     try {
-      await register(form);
-
-      setSuccess(
-        "Cuenta creada correctamente. Redirigiendo al login..."
-      );
-
-      setTimeout(() => {
-        router.replace("/login");
-      }, 1500);
-    } catch (error) {
-      setError(
-        error instanceof Error
-          ? error.message
-          : "No se pudo crear la cuenta"
-      );
-    } finally {
-      setLoading(false);
+      await register({ ...form, username: form.username.trim(), email: form.email.trim() });
+      // Cuenta creada: se entra directamente, sin volver a escribir la contraseña.
+      await iniciarSesion(form.username.trim(), form.password);
+      router.replace("/dashboard");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No se pudo crear la cuenta.");
+      setEnviando(false);
     }
   }
 
   return (
-    <main className="login-page">
-      <section className="login-card register-card">
-        <div className="login-logo">PC</div>
+    <main className="acceso">
+      <section className="acceso-form">
+        <div className="acceso-form-interior ancho">
+          <Link href="/login" className="marca">PC Stock</Link>
 
-        <h1>Crear cuenta</h1>
+          <h1>Crear cuenta de cliente</h1>
+          <p className="intro">Con tu cuenta puedes consultar el catálogo y los precios actualizados.</p>
 
-        <p className="login-subtitle">
-          Regístrate como cliente
-        </p>
-
-        <form
-          className="login-form"
-          onSubmit={handleSubmit}
-        >
-          <div className="form-group">
-            <label htmlFor="first_name">
-              Nombres
-            </label>
-
-            <input
-              id="first_name"
-              name="first_name"
-              type="text"
-              value={form.first_name}
-              onChange={handleChange}
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="last_name">
-              Apellidos
-            </label>
-
-            <input
-              id="last_name"
-              name="last_name"
-              type="text"
-              value={form.last_name}
-              onChange={handleChange}
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="documento">
-              Documento
-            </label>
-
-            <input
-              id="documento"
-              name="documento"
-              type="text"
-              value={form.documento}
-              onChange={handleChange}
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="telefono">
-              Teléfono
-            </label>
-
-            <input
-              id="telefono"
-              name="telefono"
-              type="text"
-              value={form.telefono}
-              onChange={handleChange}
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="email">
-              Correo electrónico
-            </label>
-
-            <input
-              id="email"
-              name="email"
-              type="email"
-              value={form.email}
-              onChange={handleChange}
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="username">
-              Nombre de usuario
-            </label>
-
-            <input
-              id="username"
-              name="username"
-              type="text"
-              value={form.username}
-              onChange={handleChange}
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="password">
-              Contraseña
-            </label>
-
-            <input
-              id="password"
-              name="password"
-              type="password"
-              minLength={8}
-              value={form.password}
-              onChange={handleChange}
-              required
-            />
-          </div>
-
-          {error && (
-            <div
-              className="login-error"
-              role="alert"
-            >
-              {error}
+          <form className="formulario" onSubmit={handleSubmit}>
+            <div className="fila-campos">
+              <Campo id="first_name" etiqueta="Nombres">
+                <input id="first_name" name="first_name" className="control" autoComplete="given-name"
+                  value={form.first_name} onChange={cambiar} required />
+              </Campo>
+              <Campo id="last_name" etiqueta="Apellidos">
+                <input id="last_name" name="last_name" className="control" autoComplete="family-name"
+                  value={form.last_name} onChange={cambiar} required />
+              </Campo>
             </div>
-          )}
 
-          {success && (
-            <div
-              className="register-success"
-              role="status"
-            >
-              {success}
+            <div className="fila-campos">
+              <Campo id="documento" etiqueta="Documento (opcional)">
+                <input id="documento" name="documento" className="control" inputMode="numeric"
+                  value={form.documento} onChange={cambiar} />
+              </Campo>
+              <Campo id="telefono" etiqueta="Teléfono (opcional)">
+                <input id="telefono" name="telefono" className="control" type="tel" autoComplete="tel"
+                  value={form.telefono} onChange={cambiar} />
+              </Campo>
             </div>
-          )}
 
-          <button
-            type="submit"
-            className="login-button"
-            disabled={loading}
-          >
-            {loading
-              ? "Creando cuenta..."
-              : "Crear cuenta"}
-          </button>
-        </form>
+            <Campo id="email" etiqueta="Correo electrónico">
+              <input id="email" name="email" className="control" type="email" autoComplete="email"
+                value={form.email} onChange={cambiar} required />
+            </Campo>
 
-        <p className="register-link">
-          ¿Ya tienes una cuenta?{" "}
-          <Link href="/login">
-            Iniciar sesión
-          </Link>
-        </p>
+            <div className="fila-campos">
+              <Campo id="username" etiqueta="Usuario">
+                <input id="username" name="username" className="control" autoComplete="username"
+                  autoCapitalize="none" value={form.username} onChange={cambiar} required />
+              </Campo>
+              <Campo id="password" etiqueta="Contraseña" ayuda="Mínimo 8 caracteres, no solo números.">
+                <input id="password" name="password" className="control" type="password"
+                  autoComplete="new-password" minLength={8} value={form.password} onChange={cambiar} required />
+              </Campo>
+            </div>
+
+            <Aviso texto={error} />
+
+            <button type="submit" className="boton bloque" disabled={enviando}>
+              {enviando ? "Creando cuenta…" : "Crear cuenta"}
+            </button>
+          </form>
+
+          <p className="acceso-pie">
+            ¿Ya tienes cuenta? <Link href="/login">Iniciar sesión</Link>
+          </p>
+        </div>
       </section>
+
+      <PanelAcceso />
     </main>
   );
 }

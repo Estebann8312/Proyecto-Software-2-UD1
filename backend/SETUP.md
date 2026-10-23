@@ -3,7 +3,7 @@
 Sistema de inventario y ventas de piezas de computador.
 
 - **Backend:** Django + Django REST Framework + PostgreSQL (carpeta `backend/`)
-- **Frontend:** React (carpeta `frontend/`)
+- **Frontend:** Next.js + React (carpeta `frontend/`)
 - **Dependencias de Python:** se manejan con **uv** (archivos `pyproject.toml` y `uv.lock` en la raíz)
 
 > **Importante:** este proyecto ya **no usa** `venv` + `pip` + `requirements.txt`. Si ves instrucciones antiguas con `pip install`, ignóralas.
@@ -146,11 +146,35 @@ uv run python manage.py test inventario
 
 Todas deben pasar antes de abrir un Pull Request.
 
-## 10. Frontend (React)
+## 10. Frontend (Next.js)
 
-> _Pendiente de completar por quien desarrolló el frontend: comandos para instalar (`npm install`) y levantar (`npm run dev`), y puerto en el que corre._
+Con el backend corriendo (paso 8), en **otra** terminal:
 
----
+```powershell
+cd frontend
+copy .env.example .env.local
+npm install
+npm run dev
+```
+
+Abre http://localhost:3000 y entra con las cuentas de prueba del paso 9. Cada rol ve un menú distinto:
+
+| Rol | Ve |
+|---|---|
+| Administrador | Inicio, Ventas (incluye anular), Inventario (crear piezas y registrar entradas), Clientes, Proveedores, Empleados |
+| Vendedor | Inicio, Ventas, Inventario (consulta), Clientes, Proveedores (consulta) |
+| Cliente | Catálogo con precios y disponibilidad |
+
+Antes de subir cambios del frontend:
+
+```powershell
+npm run lint
+npm run build
+```
+
+Ambos deben terminar sin errores. `npm run lint` debe decir 0 problemas.
+
+> **Estructura:** las pantallas con sesión están en `app/(app)/` y comparten la barra lateral (`components/AppShell.tsx`). Las llamadas a la API pasan por `lib/api.ts` (renueva el token solo) y la sesión por `lib/session.tsx`. Los colores y tipos de letra están en las variables al inicio de `app/global.css`.
 
 ## Comandos de uv que vas a usar seguido
 
@@ -195,6 +219,7 @@ uv run python manage.py migrate
 | `ModuleNotFoundError: No module named 'django'` | Estás usando el Python global. Corre los comandos con `uv run ...` y ejecuta `uv sync` en la raíz. |
 | `permiso denegado al esquema public` al migrar | Falta ejecutar el *PASO 2* de `crear_bd.sql` (permisos sobre el esquema `public`). |
 | `could not connect to server` | PostgreSQL no está corriendo. Revisa en "Servicios" de Windows que esté en ejecución. |
+| El frontend dice "No se pudo consultar el inventario" | El backend no está corriendo, o `NEXT_PUBLIC_API_URL` en `frontend/.env.local` no apunta a él. |
 | Errores de CORS en la consola del navegador | Falta o está mal la configuración de CORS (paso 5), o el puerto del frontend no está en `CORS_ALLOWED_ORIGINS`. |
 | VS Code subraya los `import django` | Selecciona el intérprete `.venv` de la raíz: `Ctrl+Shift+P` → **Python: Select Interpreter**. |
 | Borrar una carpeta `venv` vieja da "Access denied" | Algún proceso la usa. Cierra VS Code y las terminales, y reintenta. La carpeta `backend/venv` del flujo anterior ya no se usa. |

@@ -2,22 +2,16 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { isAuthenticated } from "../lib/api";
+import { useSession } from "../lib/session";
 
 export default function HomePage() {
   const router = useRouter();
+  const { estado } = useSession();
 
   useEffect(() => {
-    if (isAuthenticated()) {
-      router.replace("/dashboard");
-    } else {
-      router.replace("/login");
-    }
-  }, [router]);
+    if (estado === "autenticado") router.replace("/dashboard");
+    if (estado === "anonimo") router.replace("/login");
+  }, [estado, router]);
 
-  return (
-    <main className="loading-page">
-      Verificando sesión...
-    </main>
-  );
+  return <p className="cargando">Cargando…</p>;
 }

@@ -482,7 +482,11 @@ with transaction.atomic():
             id_pieza=piezas[p_idx],
             cantidad=cant,
             costo_unitario=costo,
-            fecha_compra=ahora - timedelta(days=dias),
+        )
+        # fecha_compra es auto_now_add: Django ignora el valor al crear,
+        # así que se ajusta después para tener un historial realista.
+        LoteCompra.objects.filter(pk=lote.pk).update(
+            fecha_compra=(ahora - timedelta(days=dias)).date()
         )
         lotes.append(lote)
 
@@ -571,7 +575,6 @@ with transaction.atomic():
         venta = Venta.objects.create(
             id_cliente=cliente_obj,
             id_vendedor=vendedor_obj,
-            fecha=fecha_venta,
             metodo_pago=sim["metodo_pago"],
             total=Decimal("0.00"),
         )
@@ -608,6 +611,8 @@ with transaction.atomic():
         # Actualizar total de la venta
         venta.total = total_venta
         venta.save()
+        # fecha es auto_now_add (y save() la reescribe): se ajusta al final.
+        Venta.objects.filter(pk=venta.pk).update(fecha=fecha_venta)
         ventas_creadas.append(venta)
 
     print(f"✔ {len(ventas_creadas)} Ventas y {detalles_creados} Detalles de venta creados con éxito.")

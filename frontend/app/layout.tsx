@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
+import "@fontsource/ibm-plex-sans/400.css";
+import "@fontsource/ibm-plex-sans/500.css";
+import "@fontsource/ibm-plex-sans/600.css";
 import "./global.css";
+import { SessionProvider } from "../lib/session";
 
 export const metadata: Metadata = {
   title: "PC Stock",
-  description:
-    "Sistema de inventario y ventas de piezas de computador",
+  description: "Inventario y ventas de piezas de computador, nuevas y reacondicionadas.",
 };
 
 export default function RootLayout({
@@ -14,7 +17,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es">
-      <body>{children}</body>
+      <body>
+        <SessionProvider>{children}</SessionProvider>
+      </body>
     </html>
   );
 }
