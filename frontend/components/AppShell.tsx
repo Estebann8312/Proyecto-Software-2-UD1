@@ -11,6 +11,7 @@ type Enlace = { href: string; texto: string; roles: Rol[] };
 const ENLACES: Enlace[] = [
   { href: "/dashboard", texto: "Inicio", roles: ["administrador", "vendedor"] },
   { href: "/dashboard", texto: "Catálogo", roles: ["cliente"] },
+  { href: "/mis-compras", texto: "Mis compras", roles: ["cliente"] },
   { href: "/ventas", texto: "Ventas", roles: ["administrador", "vendedor"] },
   { href: "/inventario", texto: "Inventario", roles: ["administrador", "vendedor"] },
   { href: "/clientes", texto: "Clientes", roles: ["administrador", "vendedor"] },

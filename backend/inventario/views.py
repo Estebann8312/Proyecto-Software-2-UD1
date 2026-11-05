@@ -1,6 +1,6 @@
 from django.db import transaction
 from django.shortcuts import get_object_or_404
-from rest_framework import status, viewsets
+from rest_framework import generics, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -220,6 +220,23 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         instance.delete()  # ProtectedError (→ 409) si tiene ventas registradas
         if user is not None:
             user.delete()
+
+
+class MisComprasView(generics.ListAPIView):
+    """
+    GET /api/mis-compras/ → compras del cliente autenticado (solo las suyas).
+    Un empleado sin ficha de cliente recibe una lista vacía.
+    """
+
+    serializer_class = VentaSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return (
+            Venta.objects.filter(id_cliente__user=self.request.user)
+            .prefetch_related("detalles__id_pieza")
+            .order_by("-fecha")
+        )
 
 
 class ClienteViewSet(viewsets.ModelViewSet):

@@ -1,22 +1,33 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, Fragment, useMemo, useState } from "react";
 
 import Eliminar from "../../../components/Eliminar";
 import { Aviso, Campo, Dialogo, Encabezado, EstadoCarga } from "../../../components/ui";
-import { enviar, type Cliente } from "../../../lib/api";
-import { fecha, normalizar } from "../../../lib/formato";
+import { enviar, type Cliente, type Venta } from "../../../lib/api";
+import { fecha, fechaConHora, normalizar, NOMBRE_PAGO, precio } from "../../../lib/formato";
 import { useRequiereSesion } from "../../../lib/session";
 import { useDatos } from "../../../lib/useDatos";
 
 export default function ClientesPage() {
   const usuario = useRequiereSesion(["administrador", "vendedor"]);
   const clientes = useDatos<Cliente[]>(usuario ? "/clientes/" : null);
+  const ventas = useDatos<Venta[]>(usuario ? "/ventas/" : null);
 
   const [busqueda, setBusqueda] = useState("");
   const [editando, setEditando] = useState<Cliente | "nuevo" | null>(null);
   const [eliminando, setEliminando] = useState<Cliente | null>(null);
   const [mensaje, setMensaje] = useState("");
+  const [abiertoId, setAbiertoId] = useState<number | null>(null);
+
+  // Compras de cada cliente, a partir del historial de ventas.
+  const comprasPorCliente = useMemo(() => {
+    const mapa = new Map<number, Venta[]>();
+    for (const v of ventas.datos ?? []) {
+      mapa.set(v.id_cliente, [...(mapa.get(v.id_cliente) ?? []), v]);
+    }
+    return mapa;
+  }, [ventas.datos]);
 
   const filtrados = useMemo(() => {
     const q = normalizar(busqueda.trim());
@@ -31,7 +42,7 @@ export default function ClientesPage() {
     <>
       <Encabezado
         titulo="Clientes"
-        descripcion={clientes.datos ? `${clientes.datos.length} clientes, con cuenta en línea o registrados en tienda.` : undefined}
+        descripcion={clientes.datos ? `${clientes.datos.length} clientes. Haz clic en uno para ver sus compras.` : undefined}
       >
         <button type="button" className="boton" onClick={() => { setMensaje(""); setEditando("nuevo"); }}>Nuevo cliente</button>
       </Encabezado>
@@ -54,32 +65,79 @@ export default function ClientesPage() {
                 <th>Cliente</th>
                 <th>Contacto</th>
                 <th>Registro</th>
+                <th className="num">Compras</th>
                 <th><span className="visualmente-oculto">Acciones</span></th>
               </tr>
             </thead>
             <tbody>
-              {filtrados.map((c) => (
-                <tr key={c.id_cliente}>
-                  <td>
-                    <span className="principal-celda">{c.nombres} {c.apellidos}</span>
-                    <span className="sub cifras">{c.documento ? `Doc. ${c.documento}` : "Sin documento"}</span>
-                  </td>
-                  <td>
-                    {c.telefono ?? "—"}
-                    <span className="sub">{c.email ?? "Sin correo"}</span>
-                  </td>
-                  <td>
-                    {c.user ? "Cuenta en línea" : "En tienda"}
-                    <span className="sub">{fecha(c.fecha_registro)}</span>
-                  </td>
-                  <td className="num">
-                    <button type="button" className="boton-texto" onClick={() => { setMensaje(""); setEditando(c); }}>Editar</button>
-                    {"  "}
-                    <button type="button" className="boton-texto peligro" style={{ marginLeft: 12 }}
-                      onClick={() => { setMensaje(""); setEliminando(c); }}>Eliminar</button>
-                  </td>
-                </tr>
-              ))}
+              {filtrados.map((c) => {
+                const compras = comprasPorCliente.get(c.id_cliente) ?? [];
+                const activas = compras.filter((v) => v.estado === "activa");
+                const total = activas.reduce((t, v) => t + Number(v.total), 0);
+                const abierto = abiertoId === c.id_cliente;
+                const alternar = () => setAbiertoId(abierto ? null : c.id_cliente);
+                return (
+                  <Fragment key={c.id_cliente}>
+                    <tr
+                      className={abierto ? "clicable seleccionada" : "clicable"}
+                      onClick={alternar}
+                      onKeyDown={(e) => {
+                        if (e.target !== e.currentTarget) return;
+                        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); alternar(); }
+                      }}
+                      tabIndex={0}
+                      aria-expanded={abierto}
+                    >
+                      <td>
+                        <span className="principal-celda">{c.nombres} {c.apellidos}</span>
+                        <span className="sub cifras">{c.documento ? `Doc. ${c.documento}` : "Sin documento"}</span>
+                      </td>
+                      <td>
+                        {c.telefono ?? "—"}
+                        <span className="sub">{c.email ?? "Sin correo"}</span>
+                      </td>
+                      <td>
+                        {c.user ? "Cuenta en línea" : "En tienda"}
+                        <span className="sub">{fecha(c.fecha_registro)}</span>
+                      </td>
+                      <td className="num">
+                        {ventas.datos ? (activas.length === 0 ? "—" : precio(total)) : "…"}
+                        {activas.length > 0 && (
+                          <span className="sub">{activas.length === 1 ? "1 compra" : `${activas.length} compras`}</span>
+                        )}
+                      </td>
+                      <td className="num" onClick={(e) => e.stopPropagation()}>
+                        <button type="button" className="boton-texto" onClick={() => { setMensaje(""); setEditando(c); }}>Editar</button>
+                        <button type="button" className="boton-texto peligro" style={{ marginLeft: 12 }}
+                          onClick={() => { setMensaje(""); setEliminando(c); }}>Eliminar</button>
+                      </td>
+                    </tr>
+                    {abierto && (
+                      <tr className="detalle-venta">
+                        <td colSpan={5}>
+                          {compras.length === 0 ? (
+                            <p className="secundario pequeno" style={{ padding: "6px 0" }}>Sin compras registradas.</p>
+                          ) : (
+                            <ul className="historial-cliente">
+                              {compras.map((v) => (
+                                <li key={v.id_venta} className={v.estado === "anulada" ? "anulada" : undefined}>
+                                  <span className="cifras">N.º {v.id_venta}</span>
+                                  <span className="pequeno">{fechaConHora(v.fecha)}</span>
+                                  <span className="pequeno">
+                                    {v.detalles.map((d) => `${d.cantidad} × ${d.pieza_nombre}`).join(", ")}
+                                    <span className="secundario"> · {NOMBRE_PAGO[v.metodo_pago] ?? v.metodo_pago}{v.estado === "anulada" ? " · anulada" : ""}</span>
+                                  </span>
+                                  <span className="num cifras">{precio(v.total)}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })}
             </tbody>
           </table>
         )}

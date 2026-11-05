@@ -943,6 +943,88 @@ tr.anulada td {
 }
 
 /* --------------------------------------------------------------------------
+   Compras de un cliente (Mis compras y pantalla Clientes)
+   -------------------------------------------------------------------------- */
+
+.compras {
+  display: grid;
+  gap: 16px;
+  max-width: 760px;
+}
+
+.compra header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 16px 22px 10px;
+}
+
+.compra header h2 {
+  font-size: var(--t-base);
+}
+
+.compra .lineas {
+  list-style: none;
+  padding: 0 22px;
+}
+
+.compra .lineas li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 16px;
+  padding: 8px 0;
+  border-top: 1px solid var(--fondo);
+}
+
+.compra footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 22px 16px;
+  border-top: 1px solid var(--linea);
+}
+
+.compra.anulada .lineas,
+.compra.anulada footer {
+  color: var(--tinta-2);
+}
+
+.compra.anulada footer strong {
+  font-weight: 400;
+  text-decoration: line-through;
+}
+
+.historial-cliente {
+  list-style: none;
+  max-width: 980px;
+}
+
+.historial-cliente li {
+  display: grid;
+  grid-template-columns: 70px 140px minmax(0, 1fr) 110px;
+  gap: 12px;
+  align-items: baseline;
+  padding: 7px 0;
+}
+
+.historial-cliente li + li {
+  border-top: 1px solid var(--superficie-2);
+}
+
+.historial-cliente .anulada {
+  color: var(--tinta-2);
+}
+
+@media (max-width: 560px) {
+  .compra .lineas li,
+  .historial-cliente li {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+}
+
+/* --------------------------------------------------------------------------
    Catálogo (clientes)
    -------------------------------------------------------------------------- */
 

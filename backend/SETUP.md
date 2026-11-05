@@ -168,7 +168,7 @@ Abre http://localhost:3000 y entra con las cuentas de prueba del paso 9. Cada ro
 |---|---|
 | Administrador | Inicio, Ventas (incluye anular), Inventario (crear piezas y registrar entradas), Clientes, Proveedores, Empleados |
 | Vendedor | Inicio, Ventas, Inventario (consulta), Clientes, Proveedores (consulta) |
-| Cliente | Catálogo con precios y disponibilidad |
+| Cliente | Catálogo con precios y disponibilidad, y Mis compras |
 
 Antes de subir cambios del frontend:
 

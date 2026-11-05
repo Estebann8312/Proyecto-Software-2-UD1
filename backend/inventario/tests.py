@@ -460,3 +460,34 @@ class ClienteTests(BaseAPITest):
             format="json",
         )
         self.assertIsNone(r.data["user"])
+
+
+class MisComprasTests(BaseAPITest):
+
+    def setUp(self):
+        super().setUp()
+        self.vend_api.post("/api/ventas/", self.payload_venta(cantidad=2), format="json")
+        otro = Cliente.objects.create(nombres="Otro", apellidos="Cliente")
+        self.vend_api.post("/api/ventas/", self.payload_venta(id_cliente=otro.pk), format="json")
+
+    def test_cliente_ve_solo_sus_compras(self):
+        r = self.cli_api.get("/api/mis-compras/")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(len(r.data), 1)
+        self.assertEqual(r.data[0]["id_cliente"], self.cliente.pk)
+        self.assertEqual(r.data[0]["detalles"][0]["cantidad"], 2)
+
+    def test_incluye_ventas_anuladas_con_su_estado(self):
+        venta_id = self.cli_api.get("/api/mis-compras/").data[0]["id_venta"]
+        self.admin_api.post(f"/api/ventas/{venta_id}/anular/")
+        self.assertEqual(self.cli_api.get("/api/mis-compras/").data[0]["estado"], "anulada")
+
+    def test_empleado_sin_ficha_recibe_lista_vacia(self):
+        self.assertEqual(self.vend_api.get("/api/mis-compras/").data, [])
+
+    def test_anonimo_no_entra(self):
+        self.assertEqual(self.anon.get("/api/mis-compras/").status_code, 401)
+
+    def test_es_solo_lectura(self):
+        r = self.cli_api.post("/api/mis-compras/", self.payload_venta(), format="json")
+        self.assertEqual(r.status_code, 405)

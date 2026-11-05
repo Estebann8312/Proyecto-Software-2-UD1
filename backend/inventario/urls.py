@@ -4,6 +4,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     LoginView,
     MeView,
+    MisComprasView,
     RegisterView,
     UsuarioViewSet,
     ClienteViewSet,
@@ -28,6 +29,7 @@ urlpatterns = [
     path("auth/login/", LoginView.as_view(), name="token_obtain_pair"),
     path("auth/register/", RegisterView.as_view(), name="register"),
     path("auth/me/", MeView.as_view(), name="me"),
+    path("mis-compras/", MisComprasView.as_view(), name="mis-compras"),
 ]
 
 urlpatterns += router.urls
