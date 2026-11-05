@@ -19,6 +19,8 @@ from inventario.models import (
 
 User = get_user_model()
 
+# Todos los valores de dinero están en pesos colombianos (COP), sin centavos.
+
 # Contraseñas de prueba (cumplen los validadores de Django)
 PASSWORD_EMPLEADOS = "Empleado.2026"
 PASSWORD_CLIENTES = "Cliente.2026"
@@ -90,7 +92,7 @@ with transaction.atomic():
             "nombre": "AMD Ryzen 5 5600X (6C/12T, hasta 4.6GHz)",
             "cat": "Procesadores (CPU)",
             "condicion": "nueva",
-            "precio_venta": Decimal("155.00"),
+            "precio_venta": Decimal("620000.00"),
             "descripcion": "Procesador socket AM4, 32MB L3 Cache, TDP 65W, incluye Wraith Stealth.",
             "stock": 14,
         },
@@ -98,7 +100,7 @@ with transaction.atomic():
             "nombre": "AMD Ryzen 7 7800X3D (8C/16T, 3D V-Cache)",
             "cat": "Procesadores (CPU)",
             "condicion": "nueva",
-            "precio_venta": Decimal("389.00"),
+            "precio_venta": Decimal("1560000.00"),
             "descripcion": "Socket AM5, el procesador definitivo para gaming con 96MB 3D V-Cache.",
             "stock": 8,
         },
@@ -106,7 +108,7 @@ with transaction.atomic():
             "nombre": "Intel Core i5-12400F (6C/12T, hasta 4.4GHz)",
             "cat": "Procesadores (CPU)",
             "condicion": "nueva",
-            "precio_venta": Decimal("130.00"),
+            "precio_venta": Decimal("520000.00"),
             "descripcion": "Socket LGA1700, excelente relación calidad/precio para gaming y trabajo.",
             "stock": 16,
         },
@@ -114,7 +116,7 @@ with transaction.atomic():
             "nombre": "Intel Core i7-13700K (16C/24T, hasta 5.4GHz)",
             "cat": "Procesadores (CPU)",
             "condicion": "reacondicionada",
-            "precio_venta": Decimal("295.00"),
+            "precio_venta": Decimal("1180000.00"),
             "descripcion": "Unidad certificada grado A, probado en banco de estrés, pasta térmica nueva.",
             "stock": 6,
         },
@@ -123,7 +125,7 @@ with transaction.atomic():
             "nombre": "NVIDIA GeForce RTX 4060 8GB GDDR6 (MSI Ventus 2X)",
             "cat": "Tarjetas Gráficas (GPU)",
             "condicion": "nueva",
-            "precio_venta": Decimal("299.00"),
+            "precio_venta": Decimal("1199000.00"),
             "descripcion": "Arquitectura Ada Lovelace, soporte DLSS 3 y Ray Tracing de última gen.",
             "stock": 10,
         },
@@ -131,7 +133,7 @@ with transaction.atomic():
             "nombre": "NVIDIA GeForce RTX 3070 8GB GDDR6 (ASUS TUF)",
             "cat": "Tarjetas Gráficas (GPU)",
             "condicion": "reacondicionada",
-            "precio_venta": Decimal("275.00"),
+            "precio_venta": Decimal("1100000.00"),
             "descripcion": "Mantenimiento completo: thermal pads cambiados, disipación al 100%.",
             "stock": 7,
         },
@@ -139,7 +141,7 @@ with transaction.atomic():
             "nombre": "AMD Radeon RX 6700 XT 12GB (Sapphire Pulse)",
             "cat": "Tarjetas Gráficas (GPU)",
             "condicion": "reacondicionada",
-            "precio_venta": Decimal("245.00"),
+            "precio_venta": Decimal("980000.00"),
             "descripcion": "Reacondicionada en fábrica, 12GB VRAM ideal para 1440p, impecable estado.",
             "stock": 5,
         },
@@ -147,7 +149,7 @@ with transaction.atomic():
             "nombre": "NVIDIA GeForce RTX 4070 SUPER 12GB (Gigabyte Windforce)",
             "cat": "Tarjetas Gráficas (GPU)",
             "condicion": "nueva",
-            "precio_venta": Decimal("599.00"),
+            "precio_venta": Decimal("2399000.00"),
             "descripcion": "Alto rendimiento para 1440p Ultra y 4K con Ray Tracing activado.",
             "stock": 6,
         },
@@ -156,7 +158,7 @@ with transaction.atomic():
             "nombre": "Corsair Vengeance LPX 16GB (2x8GB) DDR4 3200MHz CL16",
             "cat": "Memorias RAM",
             "condicion": "nueva",
-            "precio_venta": Decimal("44.00"),
+            "precio_venta": Decimal("176000.00"),
             "descripcion": "Kit dual channel, disipador de aluminio anodizado de bajo perfil.",
             "stock": 24,
         },
@@ -164,7 +166,7 @@ with transaction.atomic():
             "nombre": "Kingston FURY Beast 32GB (2x16GB) DDR4 3200MHz CL16",
             "cat": "Memorias RAM",
             "condicion": "nueva",
-            "precio_venta": Decimal("72.00"),
+            "precio_venta": Decimal("288000.00"),
             "descripcion": "Kit de alto rendimiento compatible con perfiles Intel XMP y AMD Ryzen.",
             "stock": 15,
         },
@@ -172,7 +174,7 @@ with transaction.atomic():
             "nombre": "G.Skill Ripjaws S5 32GB (2x16GB) DDR5 6000MHz CL36",
             "cat": "Memorias RAM",
             "condicion": "nueva",
-            "precio_venta": Decimal("112.00"),
+            "precio_venta": Decimal("448000.00"),
             "descripcion": "Memoria DDR5 de alta velocidad con disipador negro mate para chipsets modernos.",
             "stock": 12,
         },
@@ -180,7 +182,7 @@ with transaction.atomic():
             "nombre": "Crucial 16GB (1x16GB) DDR4 2666MHz",
             "cat": "Memorias RAM",
             "condicion": "reacondicionada",
-            "precio_venta": Decimal("26.00"),
+            "precio_venta": Decimal("104000.00"),
             "descripcion": "Módulo OEM verificado con MemTest86 sin errores, ideal para actualización.",
             "stock": 9,
         },
@@ -189,7 +191,7 @@ with transaction.atomic():
             "nombre": "Kingston NV2 1TB M.2 2280 NVMe PCIe 4.0",
             "cat": "Almacenamiento (SSD/HDD)",
             "condicion": "nueva",
-            "precio_venta": Decimal("60.00"),
+            "precio_venta": Decimal("240000.00"),
             "descripcion": "Lectura hasta 3500MB/s, ideal para arranque rápido y almacenamiento principal.",
             "stock": 20,
         },
@@ -197,7 +199,7 @@ with transaction.atomic():
             "nombre": "Samsung 980 PRO 2TB M.2 NVMe PCIe 4.0 con Disipador",
             "cat": "Almacenamiento (SSD/HDD)",
             "condicion": "nueva",
-            "precio_venta": Decimal("165.00"),
+            "precio_venta": Decimal("660000.00"),
             "descripcion": "Velocidades secuenciales de hasta 7000MB/s, compatible con PS5 y PC Master Race.",
             "stock": 9,
         },
@@ -205,7 +207,7 @@ with transaction.atomic():
             "nombre": "Crucial BX500 480GB SATA 2.5''",
             "cat": "Almacenamiento (SSD/HDD)",
             "condicion": "nueva",
-            "precio_venta": Decimal("34.00"),
+            "precio_venta": Decimal("136000.00"),
             "descripcion": "SSD SATA tradicional para repotenciar portátiles o PCs de oficina.",
             "stock": 18,
         },
@@ -213,7 +215,7 @@ with transaction.atomic():
             "nombre": "Western Digital Blue 1TB HDD 3.5'' 7200 RPM",
             "cat": "Almacenamiento (SSD/HDD)",
             "condicion": "reacondicionada",
-            "precio_venta": Decimal("22.00"),
+            "precio_venta": Decimal("88000.00"),
             "descripcion": "Disco mecánico testeado con CrystalDiskInfo al 100% de salud, cero sectores dañados.",
             "stock": 11,
         },
@@ -222,7 +224,7 @@ with transaction.atomic():
             "nombre": "ASUS TUF Gaming B550-PLUS WiFi II (Socket AM4)",
             "cat": "Motherboards",
             "condicion": "nueva",
-            "precio_venta": Decimal("145.00"),
+            "precio_venta": Decimal("580000.00"),
             "descripcion": "Placa base ATX, PCIe 4.0, doble M.2, WiFi 6 integrado, VRM robusto.",
             "stock": 8,
         },
@@ -230,7 +232,7 @@ with transaction.atomic():
             "nombre": "MSI B650 Gaming Plus WiFi (Socket AM5)",
             "cat": "Motherboards",
             "condicion": "nueva",
-            "precio_venta": Decimal("179.00"),
+            "precio_venta": Decimal("716000.00"),
             "descripcion": "Soporta procesadores serie AMD Ryzen 7000 y 8000, DDR5, conectividad 2.5G LAN.",
             "stock": 10,
         },
@@ -238,7 +240,7 @@ with transaction.atomic():
             "nombre": "Gigabyte B760M DS3H AX DDR4 (LGA1700)",
             "cat": "Motherboards",
             "condicion": "nueva",
-            "precio_venta": Decimal("115.00"),
+            "precio_venta": Decimal("460000.00"),
             "descripcion": "Formato micro-ATX para procesadores Intel de 12va, 13ra y 14ta generación.",
             "stock": 9,
         },
@@ -246,7 +248,7 @@ with transaction.atomic():
             "nombre": "ASUS ROG Strix Z690-F Gaming WiFi (LGA1700)",
             "cat": "Motherboards",
             "condicion": "reacondicionada",
-            "precio_venta": Decimal("195.00"),
+            "precio_venta": Decimal("780000.00"),
             "descripcion": "Gama alta, BIOS actualizada, accesorios completos, excelente para overclocking.",
             "stock": 4,
         },
@@ -255,7 +257,7 @@ with transaction.atomic():
             "nombre": "Corsair RM750e 750W 80 Plus Gold Modular",
             "cat": "Fuentes de Poder (PSU)",
             "condicion": "nueva",
-            "precio_venta": Decimal("108.00"),
+            "precio_venta": Decimal("432000.00"),
             "descripcion": "Certificación Cybenetics Gold, compatibilidad con ATX 3.0 y cable PCIe 5.0 12VHPWR.",
             "stock": 11,
         },
@@ -263,7 +265,7 @@ with transaction.atomic():
             "nombre": "EVGA 600 W1 600W 80 Plus White",
             "cat": "Fuentes de Poder (PSU)",
             "condicion": "reacondicionada",
-            "precio_venta": Decimal("38.00"),
+            "precio_venta": Decimal("152000.00"),
             "descripcion": "Fuente económica de 600W inspeccionada y certificada para ensambles básicos.",
             "stock": 8,
         },
@@ -271,7 +273,7 @@ with transaction.atomic():
             "nombre": "Seasonic FOCUS GX-850 850W 80 Plus Gold Full Modular",
             "cat": "Fuentes de Poder (PSU)",
             "condicion": "nueva",
-            "precio_venta": Decimal("142.00"),
+            "precio_venta": Decimal("568000.00"),
             "descripcion": "Condensadores 100% japoneses, modo híbrido de ventilador silencioso, 10 años garantía.",
             "stock": 7,
         },
@@ -460,19 +462,19 @@ with transaction.atomic():
     # =========================================================================
     lotes_config = [
         # (index_pieza, index_proveedor, cantidad, margen_costo_aprox, dias_atras)
-        (0, 0, 10, Decimal("115.00"), 80),  # Ryzen 5 5600X
-        (1, 1, 5, Decimal("300.00"), 75),   # Ryzen 7 7800X3D
-        (2, 2, 12, Decimal("98.00"), 70),   # i5-12400F
-        (4, 0, 8, Decimal("230.00"), 65),   # RTX 4060
-        (5, 3, 5, Decimal("210.00"), 60),   # RTX 3070 reacondicionada
-        (7, 4, 4, Decimal("480.00"), 55),   # RTX 4070 SUPER
-        (8, 1, 20, Decimal("32.00"), 50),   # RAM Corsair LPX
-        (10, 2, 10, Decimal("85.00"), 45),  # RAM G.Skill DDR5
-        (12, 0, 15, Decimal("42.00"), 40),  # SSD Kingston NV2
-        (13, 4, 6, Decimal("125.00"), 35),  # SSD Samsung 980 Pro
-        (16, 2, 6, Decimal("110.00"), 30),  # Asus TUF B550
-        (17, 1, 8, Decimal("138.00"), 25),  # MSI B650
-        (20, 3, 8, Decimal("80.00"), 20),   # PSU Corsair 750W
+        (0, 0, 10, Decimal("460000.00"), 80),  # Ryzen 5 5600X
+        (1, 1, 5, Decimal("1200000.00"), 75),   # Ryzen 7 7800X3D
+        (2, 2, 12, Decimal("392000.00"), 70),   # i5-12400F
+        (4, 0, 8, Decimal("920000.00"), 65),   # RTX 4060
+        (5, 3, 5, Decimal("840000.00"), 60),   # RTX 3070 reacondicionada
+        (7, 4, 4, Decimal("1920000.00"), 55),   # RTX 4070 SUPER
+        (8, 1, 20, Decimal("128000.00"), 50),   # RAM Corsair LPX
+        (10, 2, 10, Decimal("340000.00"), 45),  # RAM G.Skill DDR5
+        (12, 0, 15, Decimal("168000.00"), 40),  # SSD Kingston NV2
+        (13, 4, 6, Decimal("500000.00"), 35),  # SSD Samsung 980 Pro
+        (16, 2, 6, Decimal("440000.00"), 30),  # Asus TUF B550
+        (17, 1, 8, Decimal("552000.00"), 25),  # MSI B650
+        (20, 3, 8, Decimal("320000.00"), 20),   # PSU Corsair 750W
     ]
 
     lotes = []

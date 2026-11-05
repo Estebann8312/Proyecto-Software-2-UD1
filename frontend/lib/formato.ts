@@ -1,11 +1,12 @@
 import type { Condicion, MetodoPago } from "./api";
 
+// Todos los valores de dinero están en pesos colombianos (COP), sin centavos.
 const numero = new Intl.NumberFormat("es-CO", {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 0,
 });
 
-/** "155.00" → "$ 155,00" */
+/** "620000.00" → "$ 620.000" (pesos colombianos) */
 export function precio(valor: string | number) {
   return `$ ${numero.format(Number(valor))}`;
 }

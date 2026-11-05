@@ -120,6 +120,11 @@ uv run python manage.py shell -c "exec(open('poblar_datos.py', encoding='utf-8')
 
 > No uses `Get-Content poblar_datos.py | ... shell`: PowerShell envía el archivo línea por línea y falla con `IndentationError`.
 
+**Moneda:** todos los valores de dinero (precios de venta, costos de lotes y totales de ventas) están en
+**pesos colombianos (COP)**, sin centavos. Se guardan como `numeric(12,2)`, igual que en RepuAuto, y el
+frontend los muestra como `$ 620.000`. Si tu base tiene datos de prueba anteriores (con precios tipo
+dólar, como `155.00`), vacíala y vuelve a correr el script para tener los valores en pesos.
+
 El script crea cuentas listas para probar (el *username* es la parte del correo antes de la `@`):
 
 | Rol | Username | Contraseña |

@@ -322,8 +322,8 @@ function FormPieza({
           </select>
         </Campo>
       </div>
-      <Campo id="p-precio" etiqueta="Precio de venta" ayuda={pieza ? undefined : "El stock empieza en 0: se suma al registrar entradas."}>
-        <input id="p-precio" className="control cifras" type="number" min="0" step="0.01" required
+      <Campo id="p-precio" etiqueta="Precio de venta (COP)" ayuda={pieza ? undefined : "El stock empieza en 0: se suma al registrar entradas."}>
+        <input id="p-precio" className="control cifras" type="number" min="0" step="1" required
           value={form.precio_venta} onChange={(e) => setForm({ ...form, precio_venta: e.target.value })} />
       </Campo>
       <Campo id="p-descripcion" etiqueta="Descripción (opcional)">
@@ -387,8 +387,8 @@ function FormLote({
           <input id="l-cantidad" className="control cifras" type="number" min="1" step="1" required
             value={form.cantidad} onChange={(e) => setForm({ ...form, cantidad: e.target.value })} />
         </Campo>
-        <Campo id="l-costo" etiqueta="Costo unitario">
-          <input id="l-costo" className="control cifras" type="number" min="0" step="0.01" required
+        <Campo id="l-costo" etiqueta="Costo unitario (COP)">
+          <input id="l-costo" className="control cifras" type="number" min="0" step="1" required
             value={form.costo_unitario} onChange={(e) => setForm({ ...form, costo_unitario: e.target.value })} />
         </Campo>
       </div>
