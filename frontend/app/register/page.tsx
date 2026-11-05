@@ -4,7 +4,6 @@ import { ChangeEvent, FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-import PanelAcceso from "../../components/PanelAcceso";
 import { Aviso, Campo } from "../../components/ui";
 import { register } from "../../lib/api";
 import { useSession } from "../../lib/session";
@@ -107,8 +106,6 @@ export default function RegisterPage() {
           </p>
         </div>
       </section>
-
-      <PanelAcceso />
     </main>
   );
 }

@@ -121,6 +121,98 @@ export type Venta = {
   detalles: DetalleVenta[];
 };
 
+/** Pieza dentro de los informes de inventario. */
+export type PiezaReporte = {
+  id_pieza: number;
+  nombre: string;
+  categoria: string;
+  condicion: Condicion;
+  stock: number;
+  precio_venta: string;
+  valor_venta: string;
+};
+
+/** GET /api/reportes/ (solo administrador). Dinero en COP como texto decimal. */
+export type Reporte = {
+  rango: { desde: string; hasta: string; dias: number; anterior_desde: string; anterior_hasta: string };
+  generado: string;
+  moneda: "COP";
+  resumen: {
+    ingresos: string;
+    ventas: number;
+    ticket_promedio: string;
+    unidades_vendidas: number;
+    clientes_distintos: number;
+    costo_estimado: string;
+    utilidad_estimada: string;
+    margen: number | null;
+    piezas_sin_costo: number;
+    ingresos_sin_costo: string;
+    anuladas: number;
+    monto_anulado: string;
+    ingresos_anterior: string;
+    ventas_anterior: number;
+    variacion_ingresos: number | null;
+    variacion_ventas: number | null;
+  };
+  por_dia: { fecha: string; ventas: number; ingresos: string }[];
+  por_metodo_pago: { metodo: MetodoPago; ventas: number; ingresos: string; porcentaje: number | null }[];
+  por_categoria: {
+    categoria: string;
+    unidades: number;
+    ingresos: string;
+    utilidad_estimada: string;
+    margen: number | null;
+    porcentaje: number | null;
+  }[];
+  por_vendedor: {
+    id_usuario: number;
+    nombre: string;
+    rol: "vendedor" | "administrador";
+    ventas: number;
+    ingresos: string;
+    ticket_promedio: string;
+    porcentaje: number | null;
+  }[];
+  top_piezas: {
+    id_pieza: number;
+    nombre: string;
+    categoria: string;
+    condicion: Condicion;
+    unidades: number;
+    ingresos: string;
+    utilidad_estimada: string | null;
+    margen: number | null;
+  }[];
+  top_clientes: {
+    id_cliente: number;
+    nombre: string;
+    con_cuenta: boolean;
+    compras: number;
+    ingresos: string;
+    ultima_compra: string;
+  }[];
+  compras: {
+    lotes: number;
+    unidades: number;
+    monto: string;
+    por_proveedor: { id_proveedor: number; proveedor: string; lotes: number; unidades: number; monto: string }[];
+  };
+  inventario: {
+    referencias: number;
+    unidades: number;
+    valor_costo: string;
+    valor_venta: string;
+    utilidad_potencial: string;
+    piezas_sin_costo: number;
+    agotadas: number;
+    stock_bajo: number;
+    umbral_stock_bajo: number;
+    criticas: PiezaReporte[];
+    sin_movimiento: PiezaReporte[];
+  };
+};
+
 export type RegistroData = {
   username: string;
   email: string;

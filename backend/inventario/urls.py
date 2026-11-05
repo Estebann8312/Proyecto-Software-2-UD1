@@ -5,6 +5,7 @@ from .views import (
     LoginView,
     MeView,
     MisComprasView,
+    ReportesView,
     RegisterView,
     UsuarioViewSet,
     ClienteViewSet,
@@ -30,6 +31,7 @@ urlpatterns = [
     path("auth/register/", RegisterView.as_view(), name="register"),
     path("auth/me/", MeView.as_view(), name="me"),
     path("mis-compras/", MisComprasView.as_view(), name="mis-compras"),
+    path("reportes/", ReportesView.as_view(), name="reportes"),
 ]
 
 urlpatterns += router.urls

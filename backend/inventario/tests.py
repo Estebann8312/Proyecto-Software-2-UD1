@@ -491,3 +491,87 @@ class MisComprasTests(BaseAPITest):
     def test_es_solo_lectura(self):
         r = self.cli_api.post("/api/mis-compras/", self.payload_venta(), format="json")
         self.assertEqual(r.status_code, 405)
+
+
+class ReportesTests(BaseAPITest):
+    """Informes del administrador: permisos, rango de fechas y cifras."""
+
+    def setUp(self):
+        super().setUp()
+        # Lote: 10 unidades a 60 → costo promedio 60 (precio de venta 100).
+        self.admin_api.post(
+            "/api/lotes/",
+            {"id_pieza": self.pieza.pk, "id_proveedor": self.proveedor.pk,
+             "cantidad": 10, "costo_unitario": "60.00"},
+            format="json",
+        )
+        self.vend_api.post("/api/ventas/", self.payload_venta(cantidad=3), format="json")
+        self.vend_api.post(
+            "/api/ventas/", self.payload_venta(cantidad=2, metodo_pago="transferencia"), format="json"
+        )
+        anulada = self.vend_api.post("/api/ventas/", self.payload_venta(cantidad=1), format="json")
+        self.admin_api.post(f"/api/ventas/{anulada.data['id_venta']}/anular/")
+
+    def test_solo_administrador(self):
+        self.assertEqual(self.admin_api.get("/api/reportes/").status_code, 200)
+        self.assertEqual(self.vend_api.get("/api/reportes/").status_code, 403)
+        self.assertEqual(self.cli_api.get("/api/reportes/").status_code, 403)
+        self.assertEqual(self.anon.get("/api/reportes/").status_code, 401)
+
+    def test_resumen_cuenta_solo_ventas_activas(self):
+        r = self.admin_api.get("/api/reportes/").data["resumen"]
+        self.assertEqual(r["ventas"], 2)
+        self.assertEqual(r["unidades_vendidas"], 5)
+        self.assertEqual(Decimal(r["ingresos"]), Decimal("500.00"))
+        self.assertEqual(Decimal(r["ticket_promedio"]), Decimal("250.00"))
+        self.assertEqual(r["anuladas"], 1)
+        self.assertEqual(Decimal(r["monto_anulado"]), Decimal("100.00"))
+
+    def test_utilidad_con_costo_promedio_de_lotes(self):
+        r = self.admin_api.get("/api/reportes/").data["resumen"]
+        self.assertEqual(Decimal(r["costo_estimado"]), Decimal("300.00"))
+        self.assertEqual(Decimal(r["utilidad_estimada"]), Decimal("200.00"))
+        self.assertEqual(r["margen"], 40.0)
+
+    def test_pieza_sin_lotes_no_infla_el_margen(self):
+        sin_lote = Pieza.objects.create(
+            nombre="Sin lote", id_categoria=self.categoria, condicion="nueva",
+            precio_venta=Decimal("50.00"), stock_actual=5,
+        )
+        self.vend_api.post(
+            "/api/ventas/",
+            self.payload_venta(detalles=[{"id_pieza": sin_lote.pk, "cantidad": 1}]),
+            format="json",
+        )
+        r = self.admin_api.get("/api/reportes/").data["resumen"]
+        self.assertEqual(r["piezas_sin_costo"], 1)
+        self.assertEqual(Decimal(r["ingresos_sin_costo"]), Decimal("50.00"))
+        self.assertEqual(r["margen"], 40.0)
+
+    def test_desgloses(self):
+        datos = self.admin_api.get("/api/reportes/").data
+        metodos = {m["metodo"]: Decimal(m["ingresos"]) for m in datos["por_metodo_pago"]}
+        self.assertEqual(metodos, {"efectivo": Decimal("300.00"), "transferencia": Decimal("200.00")})
+        self.assertEqual(datos["por_vendedor"][0]["id_usuario"], self.vendedor.pk)
+        self.assertEqual(datos["top_piezas"][0]["unidades"], 5)
+        self.assertEqual(datos["top_clientes"][0]["compras"], 2)
+        self.assertEqual(datos["compras"]["unidades"], 10)
+        self.assertEqual(len(datos["por_dia"]), 30)
+
+    def test_inventario_valorizado(self):
+        inv = self.admin_api.get("/api/reportes/").data["inventario"]
+        # Stock: 10 iniciales + 10 del lote - 5 vendidas = 15
+        self.assertEqual(inv["unidades"], 15)
+        self.assertEqual(Decimal(inv["valor_venta"]), Decimal("1500.00"))
+        self.assertEqual(Decimal(inv["valor_costo"]), Decimal("900.00"))
+
+    def test_rango_sin_ventas(self):
+        r = self.admin_api.get("/api/reportes/?desde=2020-01-01&hasta=2020-01-31").data
+        self.assertEqual(r["resumen"]["ventas"], 0)
+        self.assertIsNone(r["resumen"]["margen"])
+        self.assertEqual(len(r["por_dia"]), 31)
+
+    def test_rango_invalido(self):
+        for query in ("desde=2026-13-01", "desde=2026-05-10&hasta=2026-05-01",
+                      "desde=2020-01-01&hasta=2026-01-01"):
+            self.assertEqual(self.admin_api.get(f"/api/reportes/?{query}").status_code, 400, query)

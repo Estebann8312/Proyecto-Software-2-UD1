@@ -17,6 +17,7 @@ const ENLACES: Enlace[] = [
   { href: "/clientes", texto: "Clientes", roles: ["administrador", "vendedor"] },
   { href: "/proveedores", texto: "Proveedores", roles: ["administrador", "vendedor"] },
   { href: "/empleados", texto: "Empleados", roles: ["administrador"] },
+  { href: "/reportes", texto: "Reportes", roles: ["administrador"] },
 ];
 
 /** Estructura de toda pantalla con sesión: barra lateral según el rol y contenido. */

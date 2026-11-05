@@ -24,6 +24,7 @@ from .permissions import (
     LecturaEmpleadoEscrituraAdmin,
     get_empleado,
 )
+from .reportes import RangoInvalido, generar_reporte, leer_rango
 from .serializers import (
     UsuarioSerializer,
     ClienteSerializer,
@@ -237,6 +238,25 @@ class MisComprasView(generics.ListAPIView):
             .prefetch_related("detalles__id_pieza")
             .order_by("-fecha")
         )
+
+
+class ReportesView(APIView):
+    """
+    GET /api/reportes/?desde=AAAA-MM-DD&hasta=AAAA-MM-DD → informe completo del negocio.
+    Exclusivo del administrador: incluye costos, utilidades y ventas por vendedor.
+    Sin fechas, cubre los últimos 30 días.
+    """
+
+    permission_classes = [IsAdministrador]
+
+    def get(self, request):
+        try:
+            desde, hasta = leer_rango(
+                request.query_params.get("desde"), request.query_params.get("hasta")
+            )
+        except RangoInvalido as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(generar_reporte(desde, hasta))
 
 
 class ClienteViewSet(viewsets.ModelViewSet):
