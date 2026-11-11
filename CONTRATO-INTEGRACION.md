@@ -2,9 +2,10 @@
 
 **PC Stock** (grupo UD1, Django) y **RepuAuto** (Flask, [repositorio](https://github.com/Thiago3108/repuauto)).
 
-Cada sede publica sus **facturas de venta y de compra** en JSON con el mismo formato. El
-**aplicativo consolidador** pide las facturas a las dos sedes y las junta. El consolidador
-lo construyó PC Stock: es la pantalla **Sedes** del administrador.
+Cada sede publica sus **facturas de venta y de compra** y su **inventario** en JSON con el mismo
+formato. El **aplicativo consolidador** los pide a las dos sedes y los junta. Las dos sedes tienen
+el suyo: en PC Stock es la pantalla **Sedes** del administrador (pestañas Facturas e Inventario) y en
+RepuAuto, su página **Consolidado de sedes**.
 
 El formato es el que propuso RepuAuto en su [docs/API.md](https://github.com/Thiago3108/repuauto/blob/main/docs/API.md).
 PC Stock lo adoptó **sin cambios**, así que las dos API se usan exactamente igual.
@@ -15,8 +16,9 @@ PC Stock lo adoptó **sin cambios**, así que las dos API se usan exactamente ig
 |---|---|
 | `POST /api/login` | Recibe `{"correo": "...", "clave": "..."}` de un **administrador** y devuelve un token |
 | `GET /api/facturas` | Facturas de la sede. Parámetros opcionales `desde`, `hasta` (`AAAA-MM-DD`) y `tipo` (`venta` o `compra`) |
+| `GET /api/inventario` | Inventario de hoy de la sede. Parámetro opcional `estado` (`en_stock`, `stock_bajo` o `agotado`) |
 
-- Las peticiones a `/api/facturas` llevan el encabezado `Authorization: Bearer <token>`.
+- Las peticiones a `/api/facturas` y `/api/inventario` llevan el encabezado `Authorization: Bearer <token>`.
 - Sin fechas se toma el mes actual: del día 1 a hoy. `hasta` se incluye completo.
 - Todo responde JSON, también los errores: `{"error": "mensaje"}`.
 
@@ -73,6 +75,45 @@ PC Stock lo adoptó **sin cambios**, así que las dos API se usan exactamente ig
   ]
 }
 ```
+
+### Respuesta de `GET /api/inventario`
+
+```json
+{
+  "sucursal": "PC Stock",
+  "fecha": "2026-11-10T19:20:06-05:00",
+  "moneda": "COP",
+  "resumen": {"productos": 23, "unidades": 214, "valor": "109726000.00", "en_stock": 22, "stock_bajo": 1, "agotado": 0},
+  "productos": [
+    {
+      "codigo": "PZ-000039",
+      "nombre": "Crucial BX500 480GB SATA 2.5''",
+      "categoria": "Almacenamiento (SSD/HDD)",
+      "marca": "Crucial",
+      "stock": 17,
+      "stock_minimo": 4,
+      "precio_venta": "136000.00",
+      "valor": "2312000.00",
+      "estado": "en_stock"
+    }
+  ]
+}
+```
+
+- **Estado:** `agotado` si el stock es 0, `stock_bajo` si es menor que `stock_minimo` y `en_stock` en los
+  demás casos.
+- **Valor:** stock × precio de venta (con IVA incluido).
+- **Resumen:** siempre de todo el inventario, aunque se filtre por `estado`.
+- **Orden:** por categoría y nombre.
+
+Cómo encaja PC Stock en ese formato (que viene de RepuAuto):
+
+| Campo | En RepuAuto | En PC Stock |
+|---|---|---|
+| `codigo` | Código del repuesto (`FRE-DIS-011`) | Se arma con el id de la pieza: `PZ-000039` |
+| `marca` | Marca del repuesto | Marca de la pieza; si no tiene, `"Sin marca"` |
+| `stock_minimo` | Mínimo de cada repuesto | **4 para todas las piezas**: PC Stock marca stock bajo con 3 unidades o menos, y con la regla "menor que el mínimo" eso equivale a un mínimo de 4 |
+| Productos | Solo los activos | Todas las piezas (PC Stock no las desactiva) |
 
 ### Errores
 
@@ -175,8 +216,12 @@ Reglas para que funcione el día de la demo:
 
 ### PC Stock (hecho)
 
-- [x] `POST /api/login` y `GET /api/facturas` con el formato de esta guía (`backend/inventario/integraciones/`).
-- [x] El token de integración **solo sirve para leer facturas**: no permite usar el resto de la API.
+- [x] `POST /api/login`, `GET /api/facturas` y `GET /api/inventario` con el formato de esta guía
+      (`backend/inventario/integraciones/`).
+- [x] El token de integración **solo sirve para leer facturas e inventario**: no permite usar el resto de la API.
+- [x] Pestaña **Inventario** en Sedes: valor, productos y estado del stock por sede y combinados, y la lista
+      de productos de las dos sedes con búsqueda, filtros y CSV (`GET /api/consolidado/inventario/`).
+- [x] Marca en las piezas (migración 0008).
 - [x] Consolidador: `GET /api/consolidado/` y la pantalla **Sedes**, que muestra los totales por sede,
       el total de las dos, el IVA y la lista de facturas, con descarga en CSV.
 - [x] Si RepuAuto no responde, el consolidado sigue funcionando con PC Stock y avisa qué pasó.

@@ -1130,7 +1130,8 @@ tr.anulada td {
   transition-duration: 0.08s;
 }
 
-.segmentado button[aria-pressed="true"] {
+.segmentado button[aria-pressed="true"],
+.segmentado button[aria-selected="true"] {
   background: var(--superficie);
   box-shadow: 0 1px 3px rgb(0 0 0 / 10%), 0 0 0 0.5px rgb(0 0 0 / 6%);
 }
@@ -1442,6 +1443,37 @@ tr.anulada td {
 /* --------------------------------------------------------------------------
    Sedes: consolidado con la sede aliada
    -------------------------------------------------------------------------- */
+
+.pestanas {
+  margin-bottom: 20px;
+}
+
+.pestanas button {
+  min-width: 110px;
+  min-height: 34px;
+  font-size: var(--t-base);
+}
+
+/* Descripción de la pestaña a la izquierda y sus acciones a la derecha. */
+.barra-vista {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.barra-vista .acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.estados-stock {
+  display: flex;
+  gap: 6px;
+}
 
 .sedes {
   display: grid;

@@ -3,7 +3,14 @@
 import { FormEvent, useMemo, useState } from "react";
 
 import { Encabezado, EstadoCarga } from "../../../components/ui";
-import type { Consolidado, FacturaSede, TipoFactura } from "../../../lib/api";
+import type {
+  Consolidado,
+  ConsolidadoInventario,
+  EstadoInventario,
+  FacturaSede,
+  ProductoSede,
+  TipoFactura,
+} from "../../../lib/api";
 import { fecha, fechaConHora, normalizar, precio } from "../../../lib/formato";
 import { atajo as rangoDeAtajo, ATAJOS, descargarCsv, type Rango } from "../../../lib/rangos";
 import { useRequiereSesion } from "../../../lib/session";
@@ -45,9 +52,7 @@ function exportar(c: Consolidado) {
   descargarCsv(`consolidado-sedes_${c.desde}_${c.hasta}.csv`, filas);
 }
 
-export default function SedesPage() {
-  const usuario = useRequiereSesion(["administrador"]);
-
+function FacturasSedes() {
   const inicial = rangoDeAtajo("mes");
   const [rango, setRango] = useState<Rango>(inicial);
   const [borrador, setBorrador] = useState<Rango>(inicial);
@@ -56,9 +61,7 @@ export default function SedesPage() {
   const [sede, setSede] = useState("");
   const [busqueda, setBusqueda] = useState("");
 
-  const consolidado = useDatos<Consolidado>(
-    usuario ? `/consolidado/?desde=${rango.desde}&hasta=${rango.hasta}` : null
-  );
+  const consolidado = useDatos<Consolidado>(`/consolidado/?desde=${rango.desde}&hasta=${rango.hasta}`);
   const c = consolidado.datos;
 
   function elegirAtajo(id: string) {
@@ -87,25 +90,23 @@ export default function SedesPage() {
   const totalVentas = Number(c?.total.venta.total ?? 0);
   const aliadaCaida = c?.sedes.some((s) => !s.propia && s.estado !== "ok");
 
-  if (!usuario) return null;
-
   return (
     <>
-      <Encabezado
-        titulo="Sedes"
-        descripcion={
-          c
+      <div className="barra-vista">
+        <p className="secundario">
+          {c
             ? `Ventas y compras de las dos sedes, del ${fecha(c.desde)} al ${fecha(c.hasta)}.`
-            : "Ventas y compras de las dos sedes en un solo lugar."
-        }
-      >
-        <button type="button" className="boton secundario" onClick={consolidado.recargar}>
-          Actualizar
-        </button>
-        <button type="button" className="boton" disabled={!c} onClick={() => c && exportar(c)}>
-          Descargar CSV
-        </button>
-      </Encabezado>
+            : "Ventas y compras de las dos sedes en un solo lugar."}
+        </p>
+        <div className="acciones">
+          <button type="button" className="boton secundario" onClick={consolidado.recargar}>
+            Actualizar
+          </button>
+          <button type="button" className="boton" disabled={!c} onClick={() => c && exportar(c)}>
+            Descargar CSV
+          </button>
+        </div>
+      </div>
 
       <form className="filtros-reporte" onSubmit={aplicar}>
         <div className="segmentado" role="group" aria-label="Periodo">
@@ -279,6 +280,253 @@ export default function SedesPage() {
           </p>
         </div>
       )}
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Inventario de las dos sedes
+// ---------------------------------------------------------------------------
+
+const ESTADO_PRODUCTO: Record<EstadoInventario, { texto: string; clase: string }> = {
+  en_stock: { texto: "En stock", clase: "ok" },
+  stock_bajo: { texto: "Stock bajo", clase: "alerta" },
+  agotado: { texto: "Agotado", clase: "peligro" },
+};
+
+function exportarInventario(c: ConsolidadoInventario) {
+  descargarCsv(`inventario-sedes_${new Date().toISOString().slice(0, 10)}.csv`, [
+    ["Inventario de las dos sedes"],
+    [],
+    ["Sede", "Estado", "Productos", "Unidades", "En stock", "Stock bajo", "Agotados", "Valor"],
+    ...c.sedes.map((s) => [
+      s.sucursal, ESTADO_SEDE[s.estado].texto, s.resumen.productos, s.resumen.unidades,
+      s.resumen.en_stock, s.resumen.stock_bajo, s.resumen.agotado, pesos(s.resumen.valor),
+    ]),
+    ["Total", "", c.total.productos, c.total.unidades, c.total.en_stock, c.total.stock_bajo, c.total.agotado, pesos(c.total.valor)],
+    [],
+    ["Sede", "Código", "Producto", "Categoría", "Marca", "Stock", "Mínimo", "Estado", "Precio", "Valor"],
+    ...c.productos.map((p) => [
+      p.sucursal, p.codigo, p.nombre, p.categoria, p.marca, p.stock, p.stock_minimo,
+      ESTADO_PRODUCTO[p.estado].texto, pesos(p.precio_venta), pesos(p.valor),
+    ]),
+  ]);
+}
+
+function InventarioSedes() {
+  const datos = useDatos<ConsolidadoInventario>("/consolidado/inventario/");
+  const c = datos.datos;
+  const [sede, setSede] = useState("");
+  const [estado, setEstado] = useState<"" | EstadoInventario>("");
+  const [busqueda, setBusqueda] = useState("");
+
+  const productos = useMemo(() => {
+    const palabras = normalizar(busqueda.trim()).split(/\s+/).filter(Boolean);
+    return (c?.productos ?? []).filter((p: ProductoSede) => {
+      if (sede && p.sucursal !== sede) return false;
+      if (estado && p.estado !== estado) return false;
+      const texto = normalizar(`${p.codigo} ${p.nombre} ${p.categoria} ${p.marca}`);
+      return palabras.every((w) => texto.includes(w));
+    });
+  }, [c, sede, estado, busqueda]);
+
+  const aliadaCaida = c?.sedes.some((s) => !s.propia && s.estado !== "ok");
+
+  return (
+    <>
+      <div className="barra-vista">
+        <p className="secundario">Stock de hoy de las dos sedes. No depende de fechas.</p>
+        <div className="acciones">
+          <button type="button" className="boton secundario" onClick={datos.recargar}>
+            Actualizar
+          </button>
+          <button type="button" className="boton" disabled={!c} onClick={() => c && exportarInventario(c)}>
+            Descargar CSV
+          </button>
+        </div>
+      </div>
+
+      <EstadoCarga cargando={datos.cargando && !c} error={datos.error} />
+
+      {c && (
+        <div className={datos.cargando ? "informe actualizando" : "informe"}>
+          {aliadaCaida && (
+            <p className="aviso" role="status" style={{ marginBottom: 20 }}>
+              Se muestra solo el inventario de las sedes en línea. {c.sedes.find((s) => !s.propia)?.error}
+            </p>
+          )}
+
+          <section className="cifras-resumen" aria-label="Inventario de las dos sedes">
+            <div className="cifra">
+              <span className="valor cifras">{precio(c.total.valor)}</span>
+              <span className="nombre">Valor del inventario</span>
+              <span className="detalle">A precio de venta, IVA incluido</span>
+            </div>
+            <div className="cifra">
+              <span className="valor cifras">{c.total.productos}</span>
+              <span className="nombre">Productos</span>
+              <span className="detalle">{c.total.unidades.toLocaleString("es-CO")} unidades</span>
+            </div>
+            <div className={c.total.stock_bajo > 0 ? "cifra alerta" : "cifra"}>
+              <span className="valor cifras">{c.total.stock_bajo}</span>
+              <span className="nombre">Con stock bajo</span>
+              <span className="detalle">Por debajo del mínimo</span>
+            </div>
+            <div className={c.total.agotado > 0 ? "cifra alerta" : "cifra"}>
+              <span className="valor cifras">{c.total.agotado}</span>
+              <span className="nombre">Agotados</span>
+              <span className="detalle">Sin unidades</span>
+            </div>
+          </section>
+
+          <section className="seccion">
+            <h2>Por sede</h2>
+            <div className="sedes">
+              {c.sedes.map((s) => {
+                const estadoSede = ESTADO_SEDE[s.estado];
+                const parte = Number(c.total.valor) > 0 ? (Number(s.resumen.valor) / Number(c.total.valor)) * 100 : 0;
+                return (
+                  <article key={s.sucursal} className="panel panel-interior sede">
+                    <header>
+                      <div>
+                        <h3>{s.sucursal}</h3>
+                        <span className="secundario pequeno">
+                          {s.propia ? "Esta sede" : "Sede aliada"}
+                          {s.fecha ? ` · al ${fechaConHora(s.fecha)}` : ""}
+                        </span>
+                      </div>
+                      <span className={`etiqueta ${estadoSede.clase}`}>{estadoSede.texto}</span>
+                    </header>
+                    {s.estado === "ok" ? (
+                      <>
+                        <dl className="datos-sede">
+                          <div>
+                            <dt>Valor</dt>
+                            <dd className="cifras">{precio(s.resumen.valor)}</dd>
+                            <span className="secundario pequeno">
+                              {s.resumen.productos} productos · {s.resumen.unidades.toLocaleString("es-CO")} ud.
+                            </span>
+                          </div>
+                          <div>
+                            <dt>Estado del stock</dt>
+                            <dd className="estados-stock">
+                              <span className="etiqueta ok cifras" title="En stock">{s.resumen.en_stock}</span>
+                              <span className="etiqueta alerta cifras" title="Stock bajo">{s.resumen.stock_bajo}</span>
+                              <span className="etiqueta peligro cifras" title="Agotados">{s.resumen.agotado}</span>
+                            </dd>
+                            <span className="secundario pequeno">en stock · bajo · agotados</span>
+                          </div>
+                        </dl>
+                        <div className="barras-pista" aria-hidden="true">
+                          <span style={{ width: `${parte}%` }} />
+                        </div>
+                        <span className="secundario pequeno cifras">
+                          {parte.toLocaleString("es-CO", { maximumFractionDigits: 1 })} % del valor de las dos sedes
+                        </span>
+                      </>
+                    ) : (
+                      <p className="secundario pequeno">{s.error}</p>
+                    )}
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className="seccion">
+            <h2>Productos</h2>
+            <div className="filtros">
+              <input className="control buscar" type="search" aria-label="Buscar producto"
+                placeholder="Buscar por código, nombre, categoría o marca" value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)} />
+              <select className="control" aria-label="Estado del stock" value={estado}
+                onChange={(e) => setEstado(e.target.value as "" | EstadoInventario)}>
+                <option value="">Cualquier stock</option>
+                <option value="en_stock">En stock</option>
+                <option value="stock_bajo">Stock bajo</option>
+                <option value="agotado">Agotados</option>
+              </select>
+              <select className="control" aria-label="Sede" value={sede} onChange={(e) => setSede(e.target.value)}>
+                <option value="">Las dos sedes</option>
+                {c.sedes.filter((s) => s.estado === "ok").map((s) => (
+                  <option key={s.sucursal} value={s.sucursal}>{s.sucursal}</option>
+                ))}
+              </select>
+            </div>
+            <div className="tabla-contenedor">
+              {productos.length === 0 ? (
+                <p className="vacio">No hay productos con esos filtros.</p>
+              ) : (
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Producto</th>
+                      <th>Sede</th>
+                      <th className="num">Precio</th>
+                      <th className="num">Stock</th>
+                      <th className="num">Valor</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {productos.map((p) => (
+                      <tr key={`${p.sucursal}-${p.codigo}`}>
+                        <td>
+                          <span className="principal-celda">{p.nombre}</span>
+                          <span className="sub">
+                            <span className="cifras">{p.codigo}</span> · {p.categoria} · {p.marca}
+                          </span>
+                        </td>
+                        <td>{p.sucursal}</td>
+                        <td className="num">{precio(p.precio_venta)}</td>
+                        <td className="num">
+                          <span className={`etiqueta ${ESTADO_PRODUCTO[p.estado].clase} cifras`}
+                            title={`${ESTADO_PRODUCTO[p.estado].texto} · mínimo ${p.stock_minimo}`}>
+                            {p.stock}
+                          </span>
+                        </td>
+                        <td className="num">{precio(p.valor)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </section>
+
+          <p className="nota-metodo secundario pequeno">
+            Cada sede publica su inventario en GET /api/inventario con el formato acordado. Stock bajo: menos
+            unidades que el mínimo de cada producto (en PC Stock, 3 unidades o menos).
+          </p>
+        </div>
+      )}
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Página
+// ---------------------------------------------------------------------------
+
+export default function SedesPage() {
+  const usuario = useRequiereSesion(["administrador"]);
+  const [vista, setVista] = useState<"facturas" | "inventario">("facturas");
+
+  if (!usuario) return null;
+
+  return (
+    <>
+      <Encabezado titulo="Sedes" descripcion="PC Stock y la sede aliada RepuAuto en un solo lugar." />
+      <div className="segmentado pestanas" role="tablist" aria-label="Qué ver">
+        <button type="button" role="tab" aria-selected={vista === "facturas"}
+          onClick={() => setVista("facturas")}>
+          Facturas
+        </button>
+        <button type="button" role="tab" aria-selected={vista === "inventario"}
+          onClick={() => setVista("inventario")}>
+          Inventario
+        </button>
+      </div>
+      {vista === "facturas" ? <FacturasSedes /> : <InventarioSedes />}
     </>
   );
 }

@@ -847,3 +847,142 @@ class ConsolidadoTests(IntegracionBase):
         with api_repuauto(facturas=malas):
             d = self.admin_api.get(self.URL).data
         self.assertEqual(d["sedes"][1]["resumen"]["venta"]["cantidad"], 1)
+
+
+# ---------------------------------------------------------------------------
+# Inventario entre sedes (formato de la sección 3 del docs/API.md de RepuAuto)
+# ---------------------------------------------------------------------------
+
+CAMPOS_PRODUCTO = ["codigo", "nombre", "categoria", "marca", "stock", "stock_minimo",
+                   "precio_venta", "valor", "estado"]
+
+
+class InventarioSedesTests(IntegracionBase):
+    """Stock de la base: Ryzen 5 = 10 + 5 del lote - 3 vendidas = 12 (la anulada se devolvió)."""
+
+    def setUp(self):
+        super().setUp()
+        self.api = self.api_con_token(self.token_integracion().data["token"])
+        # update() y no save(): el objeto en memoria tiene el stock de antes de las ventas.
+        Pieza.objects.filter(pk=self.pieza.pk).update(marca="AMD")
+        gpu = CategoriaPieza.objects.create(nombre="GPU")
+        self.bajo = Pieza.objects.create(nombre="RTX 4060", id_categoria=gpu, condicion="nueva",
+                                         precio_venta=Decimal("1200.00"), stock_actual=3)
+        self.justo = Pieza.objects.create(nombre="RX 6700", id_categoria=gpu, condicion="nueva",
+                                          precio_venta=Decimal("900.00"), stock_actual=4)
+        self.agotada = Pieza.objects.create(nombre="Arc A770", id_categoria=gpu, condicion="nueva",
+                                            precio_venta=Decimal("800.00"), stock_actual=0)
+
+    def productos(self, query=""):
+        return {p["nombre"]: p for p in self.api.get(f"/api/inventario{query}").data["productos"]}
+
+    def test_estructura_igual_a_la_de_repuauto(self):
+        d = self.api.get("/api/inventario").data
+        self.assertEqual(list(d), ["sucursal", "fecha", "moneda", "resumen", "productos"])
+        self.assertEqual(list(d["resumen"]),
+                         ["productos", "unidades", "valor", "en_stock", "stock_bajo", "agotado"])
+        self.assertRegex(d["fecha"], r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}-05:00$")
+        for p in d["productos"]:
+            self.assertEqual(list(p), CAMPOS_PRODUCTO)
+            self.assertRegex(p["codigo"], r"^PZ-\d{6}$")
+            self.assertRegex(p["valor"], r"^\d+\.\d{2}$")
+            self.assertEqual(Decimal(p["valor"]), Decimal(p["precio_venta"]) * p["stock"])
+
+    def test_estado_con_la_regla_de_repuauto(self):
+        p = self.productos()
+        self.assertEqual(p["Ryzen 5"]["stock"], 12)
+        self.assertEqual(p["Ryzen 5"]["estado"], "en_stock")
+        # Mínimo 4 para todas: 3 unidades es stock bajo, 4 ya no (igual que en las pantallas).
+        self.assertEqual(p["RTX 4060"]["estado"], "stock_bajo")
+        self.assertEqual(p["RX 6700"]["estado"], "en_stock")
+        self.assertEqual(p["Arc A770"]["estado"], "agotado")
+        self.assertTrue(all(x["stock_minimo"] == 4 for x in p.values()))
+
+    def test_marca_y_orden(self):
+        d = self.api.get("/api/inventario").data["productos"]
+        self.assertEqual([(x["categoria"], x["nombre"]) for x in d],
+                         sorted((x["categoria"], x["nombre"]) for x in d))
+        p = {x["nombre"]: x for x in d}
+        self.assertEqual(p["Ryzen 5"]["marca"], "AMD")
+        self.assertEqual(p["RTX 4060"]["marca"], "Sin marca")
+
+    def test_resumen_de_todo_aunque_se_filtre(self):
+        todo = self.api.get("/api/inventario").data
+        filtrado = self.api.get("/api/inventario?estado=stock_bajo").data
+        self.assertEqual(filtrado["resumen"], todo["resumen"])
+        self.assertEqual([p["nombre"] for p in filtrado["productos"]], ["RTX 4060"])
+        r = todo["resumen"]
+        self.assertEqual((r["productos"], r["unidades"]), (4, 12 + 3 + 4))
+        self.assertEqual((r["en_stock"], r["stock_bajo"], r["agotado"]), (2, 1, 1))
+        self.assertEqual(Decimal(r["valor"]), Decimal("1200.00") + Decimal("3600.00") + Decimal("3600.00"))
+
+    def test_errores_y_permisos(self):
+        r = self.api.get("/api/inventario?estado=otro")
+        self.assertEqual(r.status_code, 400)
+        self.assertIn("error", r.data)
+        self.assertEqual(self.anon.get("/api/inventario").status_code, 401)
+        self.assertEqual(self.vend_api.get("/api/inventario").data,
+                         {"error": "Solo un administrador puede usar la API."})
+        self.assertEqual(self.api.get("/api/inventario/").status_code, 200)
+        self.assertEqual(self.admin_api.get("/api/inventario").status_code, 200)
+
+
+INVENTARIO_REPUAUTO = {
+    "sucursal": "Bucaramanga",
+    "fecha": "2026-11-10T11:45:00-05:00",
+    "moneda": "COP",
+    "resumen": {"productos": 2, "unidades": 13, "valor": "2105000.00",
+                "en_stock": 1, "stock_bajo": 1, "agotado": 0},
+    "productos": [
+        {"codigo": "FRE-DIS-011", "nombre": "Disco de freno ventilado", "categoria": "Frenos",
+         "marca": "Genérica", "stock": 1, "stock_minimo": 4, "precio_venta": "185000.00",
+         "valor": "185000.00", "estado": "stock_bajo"},
+        {"codigo": "FIL-ACE-001", "nombre": "Filtro de aceite", "categoria": "Filtros",
+         "marca": "Bosch", "stock": 12, "stock_minimo": 3, "precio_venta": "160000.00",
+         "valor": "1920000.00", "estado": "en_stock"},
+    ],
+}
+
+
+class ConsolidadoInventarioTests(IntegracionBase):
+
+    URL = "/api/consolidado/inventario/"
+
+    def test_solo_administrador(self):
+        self.assertEqual(self.vend_api.get(self.URL).status_code, 403)
+        self.assertEqual(self.anon.get(self.URL).status_code, 401)
+
+    @override_settings(REPUAUTO=REPUAUTO_PRUEBA)
+    def test_junta_el_inventario_de_las_dos_sedes(self):
+        with api_repuauto(facturas=INVENTARIO_REPUAUTO):
+            d = self.admin_api.get(self.URL).data
+        self.assertEqual([s["estado"] for s in d["sedes"]], ["ok", "ok"])
+        aliada = d["sedes"][1]
+        self.assertEqual((aliada["sucursal"], aliada["resumen"]["productos"]), ("Bucaramanga", 2))
+        self.assertEqual(d["total"]["productos"], 3)
+        self.assertEqual(d["total"]["unidades"], 12 + 13)
+        self.assertEqual({p["sucursal"] for p in d["productos"]}, {"PC Stock", "Bucaramanga"})
+
+    @override_settings(REPUAUTO=REPUAUTO_PRUEBA)
+    def test_sede_que_no_publica_inventario(self):
+        with api_repuauto(facturas={"error": "La ruta no existe."}, codigo_facturas=404):
+            d = self.admin_api.get(self.URL).data
+        self.assertEqual(d["sedes"][1]["estado"], "error")
+        self.assertIn("todavía no publica /api/inventario", d["sedes"][1]["error"])
+        self.assertEqual(d["total"]["productos"], 1)
+
+    @override_settings(REPUAUTO=REPUAUTO_PRUEBA)
+    def test_ignora_productos_ilegibles(self):
+        malos = {**INVENTARIO_REPUAUTO, "productos": INVENTARIO_REPUAUTO["productos"] + [
+            {"nombre": "Sin estado", "stock": 1, "precio_venta": "1.00", "valor": "1.00"},
+            {"nombre": "Stock raro", "stock": "mucho", "precio_venta": "1.00", "valor": "1.00", "estado": "en_stock"},
+        ]}
+        with api_repuauto(facturas=malos):
+            d = self.admin_api.get(self.URL).data
+        self.assertEqual(d["sedes"][1]["resumen"]["productos"], 2)
+
+    @override_settings(REPUAUTO={"URL": "", "CORREO": "", "CLAVE": "", "TIMEOUT": 2})
+    def test_sin_configurar(self):
+        d = self.admin_api.get(self.URL).data
+        self.assertEqual(d["sedes"][1]["estado"], "sin_configurar")
+        self.assertEqual(d["total"]["productos"], 1)

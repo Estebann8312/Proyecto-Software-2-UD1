@@ -3,9 +3,12 @@ Endpoints de la integración entre sedes.
 
 POST /api/login       {"correo", "clave"} → token (solo administradores). Igual al de RepuAuto.
 GET  /api/facturas    ?desde&hasta&tipo   → facturas de esta sede en el formato acordado.
-GET  /api/consolidado/ ?desde&hasta       → las dos sedes juntas (para nuestro frontend).
+GET  /api/inventario  ?estado             → inventario de esta sede en el formato acordado.
+GET  /api/consolidado/ ?desde&hasta       → facturas de las dos sedes (para nuestro frontend).
+GET  /api/consolidado/inventario/         → inventario de las dos sedes (para nuestro frontend).
 
-/api/login y /api/facturas imitan a RepuAuto también en los errores: siempre {"error": "..."}.
+/api/login, /api/facturas y /api/inventario imitan a RepuAuto también en los errores:
+siempre {"error": "..."}.
 """
 
 from datetime import timedelta
@@ -22,7 +25,7 @@ from rest_framework_simplejwt.tokens import AccessToken
 
 from ..autenticacion import ALCANCE_INTEGRACION
 from ..permissions import IsAdministrador, get_empleado
-from . import consolidado, facturas
+from . import consolidado, facturas, inventario
 
 User = get_user_model()
 
@@ -75,9 +78,9 @@ class LoginSedesView(VistaFormatoSedes):
         })
 
 
-class FacturasSedesView(VistaFormatoSedes):
-    """Facturas de esta sede para el consolidador. Solo con token de administrador
-    (el de /api/login o el normal del frontend)."""
+class VistaLecturaSedes(VistaFormatoSedes):
+    """Lectura para la otra sede. Acepta el token de /api/login (que solo sirve aquí)
+    y el token normal del frontend, siempre de un administrador."""
 
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAdministrador]
@@ -86,6 +89,10 @@ class FacturasSedesView(VistaFormatoSedes):
         if request.user and request.user.is_authenticated:
             message = "Solo un administrador puede usar la API."
         super().permission_denied(request, message=message, code=code)
+
+
+class FacturasSedesView(VistaLecturaSedes):
+    """Facturas de esta sede para el consolidador."""
 
     def get(self, request):
         tipo = request.query_params.get("tipo", "").strip().lower() or None
@@ -101,6 +108,17 @@ class FacturasSedesView(VistaFormatoSedes):
         return Response(facturas.facturas(desde, hasta, tipo))
 
 
+class InventarioSedesView(VistaLecturaSedes):
+    """Inventario de hoy de esta sede, con el formato de RepuAuto."""
+
+    def get(self, request):
+        try:
+            estado = inventario.leer_estado(request.query_params.get("estado"))
+        except inventario.EstadoInvalido as e:
+            return error(str(e), status.HTTP_400_BAD_REQUEST)
+        return Response(inventario.inventario(estado))
+
+
 class ConsolidadoView(APIView):
     """Las dos sedes juntas, para la pantalla del administrador."""
 
@@ -114,3 +132,12 @@ class ConsolidadoView(APIView):
         except facturas.RangoInvalido as e:
             return error(str(e), status.HTTP_400_BAD_REQUEST)
         return Response(consolidado.consolidar(desde, hasta))
+
+
+class ConsolidadoInventarioView(APIView):
+    """Inventario de hoy de las dos sedes, para la pantalla del administrador."""
+
+    permission_classes = [IsAdministrador]
+
+    def get(self, request):
+        return Response(consolidado.consolidar_inventario())

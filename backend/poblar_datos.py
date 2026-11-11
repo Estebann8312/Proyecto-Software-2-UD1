@@ -95,6 +95,7 @@ with transaction.atomic():
         # Procesadores
         {
             "nombre": "AMD Ryzen 5 5600X (6C/12T, hasta 4.6GHz)",
+            "marca": "AMD",
             "cat": "Procesadores (CPU)",
             "condicion": "nueva",
             "precio_venta": Decimal("620000.00"),
@@ -103,6 +104,7 @@ with transaction.atomic():
         },
         {
             "nombre": "AMD Ryzen 7 7800X3D (8C/16T, 3D V-Cache)",
+            "marca": "AMD",
             "cat": "Procesadores (CPU)",
             "condicion": "nueva",
             "precio_venta": Decimal("1560000.00"),
@@ -111,6 +113,7 @@ with transaction.atomic():
         },
         {
             "nombre": "Intel Core i5-12400F (6C/12T, hasta 4.4GHz)",
+            "marca": "Intel",
             "cat": "Procesadores (CPU)",
             "condicion": "nueva",
             "precio_venta": Decimal("520000.00"),
@@ -119,6 +122,7 @@ with transaction.atomic():
         },
         {
             "nombre": "Intel Core i7-13700K (16C/24T, hasta 5.4GHz)",
+            "marca": "Intel",
             "cat": "Procesadores (CPU)",
             "condicion": "reacondicionada",
             "precio_venta": Decimal("1180000.00"),
@@ -128,6 +132,7 @@ with transaction.atomic():
         # Tarjetas Gráficas
         {
             "nombre": "NVIDIA GeForce RTX 4060 8GB GDDR6 (MSI Ventus 2X)",
+            "marca": "MSI",
             "cat": "Tarjetas Gráficas (GPU)",
             "condicion": "nueva",
             "precio_venta": Decimal("1199000.00"),
@@ -136,6 +141,7 @@ with transaction.atomic():
         },
         {
             "nombre": "NVIDIA GeForce RTX 3070 8GB GDDR6 (ASUS TUF)",
+            "marca": "ASUS",
             "cat": "Tarjetas Gráficas (GPU)",
             "condicion": "reacondicionada",
             "precio_venta": Decimal("1100000.00"),
@@ -144,6 +150,7 @@ with transaction.atomic():
         },
         {
             "nombre": "AMD Radeon RX 6700 XT 12GB (Sapphire Pulse)",
+            "marca": "Sapphire",
             "cat": "Tarjetas Gráficas (GPU)",
             "condicion": "reacondicionada",
             "precio_venta": Decimal("980000.00"),
@@ -152,6 +159,7 @@ with transaction.atomic():
         },
         {
             "nombre": "NVIDIA GeForce RTX 4070 SUPER 12GB (Gigabyte Windforce)",
+            "marca": "Gigabyte",
             "cat": "Tarjetas Gráficas (GPU)",
             "condicion": "nueva",
             "precio_venta": Decimal("2399000.00"),
@@ -161,6 +169,7 @@ with transaction.atomic():
         # Memorias RAM
         {
             "nombre": "Corsair Vengeance LPX 16GB (2x8GB) DDR4 3200MHz CL16",
+            "marca": "Corsair",
             "cat": "Memorias RAM",
             "condicion": "nueva",
             "precio_venta": Decimal("176000.00"),
@@ -169,6 +178,7 @@ with transaction.atomic():
         },
         {
             "nombre": "Kingston FURY Beast 32GB (2x16GB) DDR4 3200MHz CL16",
+            "marca": "Kingston",
             "cat": "Memorias RAM",
             "condicion": "nueva",
             "precio_venta": Decimal("288000.00"),
@@ -177,6 +187,7 @@ with transaction.atomic():
         },
         {
             "nombre": "G.Skill Ripjaws S5 32GB (2x16GB) DDR5 6000MHz CL36",
+            "marca": "G.Skill",
             "cat": "Memorias RAM",
             "condicion": "nueva",
             "precio_venta": Decimal("448000.00"),
@@ -185,6 +196,7 @@ with transaction.atomic():
         },
         {
             "nombre": "Crucial 16GB (1x16GB) DDR4 2666MHz",
+            "marca": "Crucial",
             "cat": "Memorias RAM",
             "condicion": "reacondicionada",
             "precio_venta": Decimal("104000.00"),
@@ -194,6 +206,7 @@ with transaction.atomic():
         # Almacenamiento
         {
             "nombre": "Kingston NV2 1TB M.2 2280 NVMe PCIe 4.0",
+            "marca": "Kingston",
             "cat": "Almacenamiento (SSD/HDD)",
             "condicion": "nueva",
             "precio_venta": Decimal("240000.00"),
@@ -202,6 +215,7 @@ with transaction.atomic():
         },
         {
             "nombre": "Samsung 980 PRO 2TB M.2 NVMe PCIe 4.0 con Disipador",
+            "marca": "Samsung",
             "cat": "Almacenamiento (SSD/HDD)",
             "condicion": "nueva",
             "precio_venta": Decimal("660000.00"),
@@ -210,6 +224,7 @@ with transaction.atomic():
         },
         {
             "nombre": "Crucial BX500 480GB SATA 2.5''",
+            "marca": "Crucial",
             "cat": "Almacenamiento (SSD/HDD)",
             "condicion": "nueva",
             "precio_venta": Decimal("136000.00"),
@@ -218,6 +233,7 @@ with transaction.atomic():
         },
         {
             "nombre": "Western Digital Blue 1TB HDD 3.5'' 7200 RPM",
+            "marca": "Western Digital",
             "cat": "Almacenamiento (SSD/HDD)",
             "condicion": "reacondicionada",
             "precio_venta": Decimal("88000.00"),
@@ -227,6 +243,7 @@ with transaction.atomic():
         # Motherboards
         {
             "nombre": "ASUS TUF Gaming B550-PLUS WiFi II (Socket AM4)",
+            "marca": "ASUS",
             "cat": "Motherboards",
             "condicion": "nueva",
             "precio_venta": Decimal("580000.00"),
@@ -235,6 +252,7 @@ with transaction.atomic():
         },
         {
             "nombre": "MSI B650 Gaming Plus WiFi (Socket AM5)",
+            "marca": "MSI",
             "cat": "Motherboards",
             "condicion": "nueva",
             "precio_venta": Decimal("716000.00"),
@@ -243,6 +261,7 @@ with transaction.atomic():
         },
         {
             "nombre": "Gigabyte B760M DS3H AX DDR4 (LGA1700)",
+            "marca": "Gigabyte",
             "cat": "Motherboards",
             "condicion": "nueva",
             "precio_venta": Decimal("460000.00"),
@@ -251,6 +270,7 @@ with transaction.atomic():
         },
         {
             "nombre": "ASUS ROG Strix Z690-F Gaming WiFi (LGA1700)",
+            "marca": "ASUS",
             "cat": "Motherboards",
             "condicion": "reacondicionada",
             "precio_venta": Decimal("780000.00"),
@@ -260,6 +280,7 @@ with transaction.atomic():
         # Fuentes de Poder
         {
             "nombre": "Corsair RM750e 750W 80 Plus Gold Modular",
+            "marca": "Corsair",
             "cat": "Fuentes de Poder (PSU)",
             "condicion": "nueva",
             "precio_venta": Decimal("432000.00"),
@@ -268,6 +289,7 @@ with transaction.atomic():
         },
         {
             "nombre": "EVGA 600 W1 600W 80 Plus White",
+            "marca": "EVGA",
             "cat": "Fuentes de Poder (PSU)",
             "condicion": "reacondicionada",
             "precio_venta": Decimal("152000.00"),
@@ -276,6 +298,7 @@ with transaction.atomic():
         },
         {
             "nombre": "Seasonic FOCUS GX-850 850W 80 Plus Gold Full Modular",
+            "marca": "Seasonic",
             "cat": "Fuentes de Poder (PSU)",
             "condicion": "nueva",
             "precio_venta": Decimal("568000.00"),
@@ -288,6 +311,7 @@ with transaction.atomic():
     for item in piezas_data:
         p = Pieza.objects.create(
             nombre=item["nombre"],
+            marca=item.get("marca"),
             id_categoria=categorias_dict[item["cat"]],
             condicion=item["condicion"],
             precio_venta=item["precio_venta"],

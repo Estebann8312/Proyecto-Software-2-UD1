@@ -1,7 +1,8 @@
 """
 Simulador de la API de RepuAuto, para probar la integración sin depender de ellos.
 
-Responde POST /api/login y GET /api/facturas con el mismo formato de su docs/API.md
+Responde POST /api/login, GET /api/facturas y GET /api/inventario con el mismo formato
+de su docs/API.md
 (https://github.com/Thiago3108/repuauto/blob/main/docs/API.md), con facturas inventadas
 dentro del rango que se pida. Solo usa la biblioteca estándar de Python.
 
@@ -92,6 +93,43 @@ def facturas(desde, hasta, tipo):
     }
 
 
+# (código, nombre, categoría, marca, stock, stock mínimo, precio)
+REPUESTOS = [
+    ("ACE-MOT-001", "Aceite de motor 20W-50 (1/4 gal)", "Aceites", "Mobil", 40, 10, 38000),
+    ("ACE-SIN-002", "Aceite sintético 5W-30 (1/4 gal)", "Aceites", "Castrol", 6, 8, 62000),
+    ("BAT-12V-003", "Batería 12V 60Ah", "Eléctrico", "Willard", 5, 2, 420000),
+    ("BUJ-IRI-004", "Bujía de iridio", "Encendido", "NGK", 0, 12, 45000),
+    ("FIL-ACE-005", "Filtro de aceite", "Filtros", "Bosch", 25, 6, 32000),
+    ("FIL-AIR-006", "Filtro de aire", "Filtros", "Mann", 3, 5, 48000),
+    ("FRE-PAS-007", "Pastillas de freno delanteras", "Frenos", "Brembo", 14, 4, 165000),
+    ("FRE-DIS-008", "Disco de freno ventilado", "Frenos", "Genérica", 1, 4, 185000),
+    ("REF-LIQ-009", "Líquido refrigerante (1 gal)", "Refrigeración", "Prestone", 18, 5, 52000),
+]
+
+
+def inventario(estado):
+    def producto(r):
+        codigo, nombre, categoria, marca, stock, minimo, precio = r
+        estado_p = "agotado" if stock == 0 else "stock_bajo" if stock < minimo else "en_stock"
+        return {"codigo": codigo, "nombre": nombre, "categoria": categoria, "marca": marca,
+                "stock": stock, "stock_minimo": minimo, "precio_venta": f"{precio}.00",
+                "valor": f"{precio * stock}.00", "estado": estado_p}
+
+    productos = sorted((producto(r) for r in REPUESTOS), key=lambda p: (p["categoria"], p["nombre"]))
+    return {
+        "sucursal": "Bucaramanga",
+        "fecha": datetime.now().strftime("%Y-%m-%dT%H:%M:%S-05:00"),
+        "moneda": "COP",
+        "resumen": {
+            "productos": len(productos),
+            "unidades": sum(p["stock"] for p in productos),
+            "valor": f"{sum(Decimal(p['valor']) for p in productos):.2f}",
+            **{e: sum(1 for p in productos if p["estado"] == e) for e in ("en_stock", "stock_bajo", "agotado")},
+        },
+        "productos": [p for p in productos if estado in (None, p["estado"])],
+    }
+
+
 class Manejador(BaseHTTPRequestHandler):
     def responder(self, codigo, datos):
         cuerpo = json.dumps(datos, ensure_ascii=False).encode("utf-8")
@@ -117,11 +155,17 @@ class Manejador(BaseHTTPRequestHandler):
 
     def do_GET(self):
         url = urlparse(self.path)
-        if url.path.rstrip("/") != "/api/facturas":
+        ruta = url.path.rstrip("/")
+        if ruta not in ("/api/facturas", "/api/inventario"):
             return self.responder(404, {"error": "La ruta no existe."})
         if self.headers.get("Authorization", "") != f"Bearer {TOKEN}":
             return self.responder(401, {"error": "Falta el token. Envía el encabezado Authorization: Bearer <token>."})
         q = {k: v[0] for k, v in parse_qs(url.query).items()}
+        if ruta == "/api/inventario":
+            estado = q.get("estado") or None
+            if estado not in (None, "en_stock", "stock_bajo", "agotado"):
+                return self.responder(400, {"error": 'El estado debe ser "en_stock", "stock_bajo" o "agotado".'})
+            return self.responder(200, inventario(estado))
         tipo = q.get("tipo") or None
         if tipo not in (None, "venta", "compra"):
             return self.responder(400, {"error": 'El tipo debe ser "venta" o "compra", o no enviarlo para traer las dos.'})

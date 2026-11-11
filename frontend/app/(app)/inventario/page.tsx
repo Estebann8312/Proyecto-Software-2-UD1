@@ -47,7 +47,7 @@ export default function InventarioPage() {
   const filtradas = useMemo(() => {
     const q = normalizar(busqueda.trim());
     return (piezas.datos ?? []).filter((p) => {
-      if (q && !normalizar(`${p.nombre} ${p.descripcion ?? ""}`).includes(q)) return false;
+      if (q && !normalizar(`${p.nombre} ${p.marca ?? ""} ${p.descripcion ?? ""}`).includes(q)) return false;
       if (categoria && String(p.id_categoria) !== categoria) return false;
       if (condicion && p.condicion !== condicion) return false;
       if (estado && estadoStock(p.stock_actual).clase !== estado) return false;
@@ -167,7 +167,7 @@ export default function InventarioPage() {
                     >
                       <td>
                         <span className="principal-celda">{p.nombre}</span>
-                        <span className="sub">{nombreCategoria(p.id_categoria)}</span>
+                        <span className="sub">{nombreCategoria(p.id_categoria)}{p.marca ? ` · ${p.marca}` : ""}</span>
                       </td>
                       <td>{NOMBRE_CONDICION[p.condicion]}</td>
                       <td className="num">{precio(p.precio_venta)}</td>
@@ -194,6 +194,7 @@ export default function InventarioPage() {
                 <h2>{seleccion.nombre}</h2>
                 <p className="secundario pequeno">
                   {nombreCategoria(seleccion.id_categoria)} · {NOMBRE_CONDICION[seleccion.condicion]}
+                  {seleccion.marca ? ` · ${seleccion.marca}` : ""}
                 </p>
                 {seleccion.descripcion && <p className="pequeno" style={{ marginTop: 8 }}>{seleccion.descripcion}</p>}
               </header>
@@ -276,6 +277,7 @@ function FormPieza({
 }) {
   const [form, setForm] = useState({
     nombre: pieza?.nombre ?? "",
+    marca: pieza?.marca ?? "",
     id_categoria: pieza ? String(pieza.id_categoria) : "",
     condicion: (pieza?.condicion ?? "nueva") as Condicion,
     precio_venta: pieza?.precio_venta ?? "",
@@ -288,7 +290,7 @@ function FormPieza({
     e.preventDefault();
     setError("");
     setEnviando(true);
-    const cuerpo = { ...form, id_categoria: Number(form.id_categoria), descripcion: form.descripcion || null };
+    const cuerpo = { ...form, id_categoria: Number(form.id_categoria), descripcion: form.descripcion || null, marca: form.marca.trim() || null };
     try {
       const resultado = pieza
         ? await enviar<Pieza>(`/piezas/${pieza.id_pieza}/`, "PATCH", cuerpo)
@@ -302,10 +304,16 @@ function FormPieza({
 
   return (
     <form className="formulario" onSubmit={guardar}>
-      <Campo id="p-nombre" etiqueta="Nombre">
-        <input id="p-nombre" className="control" value={form.nombre} required maxLength={150}
-          onChange={(e) => setForm({ ...form, nombre: e.target.value })} />
-      </Campo>
+      <div className="fila-campos">
+        <Campo id="p-nombre" etiqueta="Nombre">
+          <input id="p-nombre" className="control" value={form.nombre} required maxLength={150}
+            onChange={(e) => setForm({ ...form, nombre: e.target.value })} />
+        </Campo>
+        <Campo id="p-marca" etiqueta="Marca (opcional)">
+          <input id="p-marca" className="control" value={form.marca} maxLength={60} placeholder="AMD, Kingston…"
+            onChange={(e) => setForm({ ...form, marca: e.target.value })} />
+        </Campo>
+      </div>
       <div className="fila-campos">
         <Campo id="p-categoria" etiqueta="Categoría">
           <select id="p-categoria" className="control" value={form.id_categoria} required

@@ -64,6 +64,7 @@ export type Lote = {
 export type Pieza = {
   id_pieza: number;
   nombre: string;
+  marca: string | null;
   id_categoria: number;
   condicion: Condicion;
   precio_venta: string;
@@ -477,4 +478,43 @@ export type Consolidado = {
   }[];
   total: Record<TipoFactura, ResumenFacturas>;
   facturas: FacturaSede[];
+};
+
+export type EstadoInventario = "en_stock" | "stock_bajo" | "agotado";
+
+export type ResumenInventario = {
+  productos: number;
+  unidades: number;
+  valor: string;
+  en_stock: number;
+  stock_bajo: number;
+  agotado: number;
+};
+
+export type ProductoSede = {
+  codigo: string;
+  nombre: string;
+  categoria: string;
+  marca: string;
+  stock: number;
+  stock_minimo: number;
+  precio_venta: string;
+  valor: string;
+  estado: EstadoInventario;
+  sucursal: string;
+};
+
+/** GET /api/consolidado/inventario/ (solo administrador): inventario de las dos sedes. */
+export type ConsolidadoInventario = {
+  moneda: "COP";
+  sedes: {
+    sucursal: string;
+    propia: boolean;
+    estado: "ok" | "error" | "sin_configurar";
+    error: string | null;
+    fecha: string | null;
+    resumen: ResumenInventario;
+  }[];
+  total: ResumenInventario;
+  productos: ProductoSede[];
 };

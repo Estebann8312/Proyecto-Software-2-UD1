@@ -1,6 +1,12 @@
 from django.urls import path, re_path
 
-from .integraciones.views import ConsolidadoView, FacturasSedesView, LoginSedesView
+from .integraciones.views import (
+    ConsolidadoInventarioView,
+    ConsolidadoView,
+    FacturasSedesView,
+    InventarioSedesView,
+    LoginSedesView,
+)
 from rest_framework.routers import DefaultRouter
 
 from .views import (
@@ -37,7 +43,9 @@ urlpatterns = [
     # Integración entre sedes: mismas rutas y formato que la API de RepuAuto.
     re_path(r"^login/?$", LoginSedesView.as_view(), name="sedes-login"),
     re_path(r"^facturas/?$", FacturasSedesView.as_view(), name="sedes-facturas"),
+    re_path(r"^inventario/?$", InventarioSedesView.as_view(), name="sedes-inventario"),
     path("consolidado/", ConsolidadoView.as_view(), name="consolidado"),
+    path("consolidado/inventario/", ConsolidadoInventarioView.as_view(), name="consolidado-inventario"),
 ]
 
 urlpatterns += router.urls

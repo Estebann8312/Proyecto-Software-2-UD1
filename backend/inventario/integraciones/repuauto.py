@@ -77,29 +77,46 @@ def _token(renovar=False):
     return token
 
 
-def facturas(desde, hasta, tipo=None):
-    """GET {URL}/facturas de RepuAuto. Devuelve su JSON tal cual, ya validado."""
+def _get_json(ruta, params=None):
+    """GET autenticado a la API de RepuAuto. Si el token venció (401), pide otro una vez."""
     if not configurado():
         raise AliadoNoDisponible("La integración con RepuAuto no está configurada en el .env.")
-
-    params = {"desde": desde.isoformat(), "hasta": hasta.isoformat()}
-    if tipo:
-        params["tipo"] = tipo
 
     respuesta = None
     for renovar in (False, True):
         cabeceras = {"Authorization": f"Bearer {_token(renovar=renovar)}"}
-        respuesta = _pedir("GET", "facturas", params=params, headers=cabeceras)
+        respuesta = _pedir("GET", ruta, params=params or {}, headers=cabeceras)
         if respuesta.status_code != 401:
             break
         cache.delete(CLAVE_CACHE)
 
+    if respuesta.status_code == 404:
+        raise AliadoNoDisponible(f"RepuAuto todavía no publica /api/{ruta}.")
     if respuesta.status_code != 200:
         raise AliadoNoDisponible(f"RepuAuto devolvió un error: {_mensaje_de_error(respuesta)}")
     try:
         datos = respuesta.json()
     except ValueError:
         raise AliadoNoDisponible("RepuAuto respondió algo que no es JSON.")
-    if not isinstance(datos, dict) or not isinstance(datos.get("facturas"), list):
+    if not isinstance(datos, dict):
         raise AliadoNoDisponible("La respuesta de RepuAuto no tiene el formato acordado.")
+    return datos
+
+
+def facturas(desde, hasta, tipo=None):
+    """GET {URL}/facturas de RepuAuto. Devuelve su JSON tal cual, ya validado."""
+    params = {"desde": desde.isoformat(), "hasta": hasta.isoformat()}
+    if tipo:
+        params["tipo"] = tipo
+    datos = _get_json("facturas", params)
+    if not isinstance(datos.get("facturas"), list):
+        raise AliadoNoDisponible("La respuesta de RepuAuto no tiene el formato acordado.")
+    return datos
+
+
+def inventario():
+    """GET {URL}/inventario de RepuAuto (todo el inventario, sin filtrar)."""
+    datos = _get_json("inventario")
+    if not isinstance(datos.get("productos"), list):
+        raise AliadoNoDisponible("El inventario de RepuAuto no tiene el formato acordado.")
     return datos

@@ -11,7 +11,7 @@ juntas.
 
 | Backend | Frontend | Base de datos | Pruebas |
 |---|---|---|---|
-| Django 6 · Django REST Framework · JWT | Next.js 16 · React 19 · TypeScript | PostgreSQL | 85 pruebas automáticas |
+| Django 6 · Django REST Framework · JWT | Next.js 16 · React 19 · TypeScript | PostgreSQL | 95 pruebas automáticas |
 
 ---
 
@@ -93,10 +93,13 @@ sequenceDiagram
 |---|---|---|
 | `POST /api/login` | Token para un administrador (`correo` y `clave`) | ✅ |
 | `GET /api/facturas` | Ventas y compras del periodo, con IVA incluido y separado | ✅ |
-| `GET /api/inventario` | Productos con stock, valor y estado (`en_stock`, `stock_bajo`, `agotado`) | 🔄 Siguiente paso: RepuAuto ya lo publicó y lo muestra en su consolidado |
+| `GET /api/inventario` | Productos con stock, valor y estado (`en_stock`, `stock_bajo`, `agotado`) | ✅ |
 
-- **Pantalla Sedes** (solo administrador): totales por sede y combinados, IVA por pagar, estado de cada
-  sede y la lista de facturas con filtros y descarga en CSV.
+- **Pantalla Sedes** (solo administrador), con dos pestañas:
+  - **Facturas:** totales por sede y combinados, IVA por pagar y la lista de facturas con filtros y CSV.
+  - **Inventario:** valor, productos y estado del stock de cada sede y de las dos juntas, y todos los
+    productos con búsqueda, filtros por sede y estado, y CSV.
+- **RepuAuto tiene su propio consolidado** que lee nuestra API con el mismo formato.
 - **Si la otra sede no responde,** la pantalla sigue funcionando con PC Stock y dice por qué.
 - **El token de integración solo sirve para leer:** no permite usar el resto de la API.
 - **Despliegue:** cada equipo corre su aplicación y la publica con **ngrok** en un dominio fijo.
@@ -137,6 +140,7 @@ Cambios que hizo la implementación sobre el diseño original:
 | `CLIENTE` | La contraseña pasa a una cuenta de Django vinculada (`user`) | Las contraseñas las cifra y valida Django; el cliente sin cuenta sigue siendo posible |
 | `USUARIO` | Vínculo `user` con la cuenta de Django | El rol se resuelve por ese vínculo y no por el correo |
 | `PROVEEDOR` | `nit` | Va en las facturas de compra que se comparten con RepuAuto |
+| `PIEZA` | `marca` | Va en el inventario que se comparte con RepuAuto |
 
 ### Vistas de usuario
 
@@ -210,7 +214,7 @@ Cuentas de prueba (las crea `backend/poblar_datos.py`):
 Pruebas y verificación:
 
 ```powershell
-uv run python manage.py test inventario    # desde backend/: 85 pruebas
+uv run python manage.py test inventario    # desde backend/: 95 pruebas
 npm run lint                               # desde frontend/: 0 problemas
 npm run build
 ```

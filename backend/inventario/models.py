@@ -85,6 +85,8 @@ class Pieza(models.Model):
 
     id_pieza = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=150)
+    # Fabricante (AMD, Kingston...). Se comparte con la otra sede en GET /api/inventario.
+    marca = models.CharField(max_length=60, blank=True, null=True)
     id_categoria = models.ForeignKey(
         CategoriaPieza, on_delete=models.PROTECT, related_name='piezas'
     )

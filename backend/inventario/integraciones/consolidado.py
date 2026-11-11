@@ -9,6 +9,7 @@ la pantalla por culpa de la otra sede.
 from decimal import Decimal, InvalidOperation
 
 from . import facturas as propias
+from . import inventario as inventario_propio
 from . import repuauto
 
 CAMPOS = ("subtotal", "iva", "total")
@@ -89,4 +90,65 @@ def consolidar(desde, hasta):
         "sedes": sedes,
         "total": total,
         "facturas": todas,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Inventario
+# ---------------------------------------------------------------------------
+
+def _producto_valido(producto):
+    """Un producto de la otra sede se usa solo si sus datos básicos son legibles."""
+    if not isinstance(producto, dict) or not isinstance(producto.get("nombre"), str):
+        return False
+    if producto.get("estado") not in inventario_propio.ESTADOS:
+        return False
+    stock = producto.get("stock")
+    if not isinstance(stock, int) or isinstance(stock, bool) or stock < 0:
+        return False
+    try:
+        return all(Decimal(str(producto.get(c))).is_finite() for c in ("precio_venta", "valor"))
+    except InvalidOperation:
+        return False
+
+
+def _sede_inventario(datos, estado="ok", error=None, propia=False):
+    productos = []
+    if datos:
+        nombre = datos.get("sucursal") or "Sin nombre"
+        productos = [{**p, "sucursal": nombre} for p in datos["productos"] if _producto_valido(p)]
+    return {
+        "sucursal": (datos or {}).get("sucursal"),
+        "propia": propia,
+        "estado": estado,
+        "error": error,
+        "fecha": (datos or {}).get("fecha"),
+        # Se recalcula de los productos: no se confía en el resumen de la otra sede.
+        "resumen": inventario_propio.resumen(productos),
+        "productos": productos,
+    }
+
+
+def consolidar_inventario():
+    sedes = [_sede_inventario(inventario_propio.inventario(), propia=True)]
+
+    if not repuauto.configurado():
+        aliada = _sede_inventario(None, estado="sin_configurar",
+                                  error="Falta configurar REPUAUTO_URL, REPUAUTO_CORREO y REPUAUTO_CLAVE en el .env.")
+    else:
+        try:
+            aliada = _sede_inventario(repuauto.inventario())
+        except repuauto.AliadoNoDisponible as e:
+            aliada = _sede_inventario(None, estado="error", error=str(e))
+    aliada["sucursal"] = aliada["sucursal"] or "RepuAuto"
+    sedes.append(aliada)
+
+    productos = [p for s in sedes for p in s["productos"]]
+    for s in sedes:
+        del s["productos"]
+    return {
+        "moneda": "COP",
+        "sedes": sedes,
+        "total": inventario_propio.resumen(productos),
+        "productos": productos,
     }
