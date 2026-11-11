@@ -31,3 +31,5 @@ frontend/*.tsbuildinfo
 # Sistema
 .DS_Store
 Thumbs.db
+# Archivos temporales de Office (se crean al tener un documento abierto)
+~$*
