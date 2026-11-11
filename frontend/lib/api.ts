@@ -75,6 +75,7 @@ export type Pieza = {
 export type Proveedor = {
   id_proveedor: number;
   nombre: string;
+  nit: string | null;
   telefono: string | null;
   contacto: string | null;
 };
@@ -441,3 +442,39 @@ export async function register(datos: RegistroData) {
 export function obtenerMe() {
   return api<Me>("/auth/me/");
 }
+
+// ---------------------------------------------------------------------------
+// Integración entre sedes (formato acordado con RepuAuto)
+// ---------------------------------------------------------------------------
+
+export type TipoFactura = "venta" | "compra";
+
+export type ResumenFacturas = { cantidad: number; subtotal: string; iva: string; total: string };
+
+export type FacturaSede = {
+  tipo: TipoFactura;
+  numero: string;
+  fecha: string;
+  tercero: { documento: string | null; nombre: string };
+  subtotal: string;
+  iva: string;
+  total: string;
+  sucursal: string;
+};
+
+/** GET /api/consolidado/ (solo administrador): las dos sedes juntas. */
+export type Consolidado = {
+  desde: string;
+  hasta: string;
+  moneda: "COP";
+  sedes: {
+    sucursal: string;
+    propia: boolean;
+    estado: "ok" | "error" | "sin_configurar";
+    error: string | null;
+    iva_porcentaje: number | null;
+    resumen: Record<TipoFactura, ResumenFacturas>;
+  }[];
+  total: Record<TipoFactura, ResumenFacturas>;
+  facturas: FacturaSede[];
+};

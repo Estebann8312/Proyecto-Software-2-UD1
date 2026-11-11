@@ -166,7 +166,7 @@ Abre http://localhost:3000 y entra con las cuentas de prueba del paso 9. Cada ro
 
 | Rol | Ve |
 |---|---|
-| Administrador | Inicio, Ventas (incluye anular), Inventario (crear piezas y registrar entradas), Clientes, Proveedores, Empleados, Reportes (ventas, utilidad, inventario y compras; CSV e impresión) |
+| Administrador | Inicio, Ventas (incluye anular), Inventario (crear piezas y registrar entradas), Clientes, Proveedores, Empleados, Reportes (ventas, utilidad, inventario y compras; CSV e impresión), Sedes (consolidado con RepuAuto) |
 | Vendedor | Inicio, Ventas, Inventario (consulta), Clientes, Proveedores (consulta) |
 | Cliente | Catálogo con precios y disponibilidad, y Mis compras |
 
@@ -180,6 +180,26 @@ npm run build
 Ambos deben terminar sin errores. `npm run lint` debe decir 0 problemas.
 
 > **Estructura:** las pantallas con sesión están en `app/(app)/` y comparten la barra lateral (`components/AppShell.tsx`). Las llamadas a la API pasan por `lib/api.ts` (renueva el token solo) y la sesión por `lib/session.tsx`. Los colores y tipos de letra están en las variables al inicio de `app/global.css`.
+
+## 11. Integración con RepuAuto (la otra sede)
+
+El formato, las reglas y qué hace cada equipo están en [`CONTRATO-INTEGRACION.md`](../CONTRATO-INTEGRACION.md). Resumen:
+
+- Nuestra API para la otra sede: `POST /api/login` (correo y clave de un administrador) y `GET /api/facturas`.
+- La pantalla **Sedes** (solo administrador) junta nuestras facturas con las de RepuAuto.
+- Para probar sin RepuAuto, en otra terminal desde `backend/`:
+
+```powershell
+uv run python simular_repuauto.py
+```
+
+Y en `backend/.env` (después, reinicia Django):
+
+```
+REPUAUTO_URL=http://127.0.0.1:5000/api
+REPUAUTO_CORREO=integracion@repuauto.com
+REPUAUTO_CLAVE=simulador
+```
 
 ## Comandos de uv que vas a usar seguido
 

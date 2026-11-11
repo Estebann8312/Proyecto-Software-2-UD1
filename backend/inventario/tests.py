@@ -5,6 +5,9 @@ Correr con:
     uv run python manage.py test inventario
 """
 from decimal import Decimal
+from unittest import mock
+
+import requests
 
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
@@ -575,3 +578,272 @@ class ReportesTests(BaseAPITest):
         for query in ("desde=2026-13-01", "desde=2026-05-10&hasta=2026-05-01",
                       "desde=2020-01-01&hasta=2026-01-01"):
             self.assertEqual(self.admin_api.get(f"/api/reportes/?{query}").status_code, 400, query)
+
+
+# ---------------------------------------------------------------------------
+# Integración entre sedes (contrato en CONTRATO-INTEGRACION.md)
+# ---------------------------------------------------------------------------
+
+CAMPOS_FACTURA = ["tipo", "numero", "fecha", "tercero", "subtotal", "iva", "total"]
+
+
+class IntegracionBase(BaseAPITest):
+    """Un lote de compra, una venta con cédula, una sin cédula y una anulada."""
+
+    def setUp(self):
+        super().setUp()
+        self.proveedor.nit = "900123456-7"
+        self.proveedor.save()
+        self.admin_api.post(
+            "/api/lotes/",
+            {"id_pieza": self.pieza.pk, "id_proveedor": self.proveedor.pk,
+             "cantidad": 5, "costo_unitario": "59.50"},
+            format="json",
+        )
+        self.cliente.documento = "1098000001"
+        self.cliente.save()
+        self.sin_doc = Cliente.objects.create(nombres="Sin", apellidos="Cedula")
+        self.venta = self.vend_api.post("/api/ventas/", self.payload_venta(cantidad=2), format="json").data
+        self.vend_api.post("/api/ventas/", self.payload_venta(id_cliente=self.sin_doc.pk), format="json")
+        anulada = self.vend_api.post("/api/ventas/", self.payload_venta(), format="json").data
+        self.admin_api.post(f"/api/ventas/{anulada['id_venta']}/anular/")
+
+    def token_integracion(self, correo="admin@tienda.com", clave=CLAVE):
+        return self.anon.post("/api/login", {"correo": correo, "clave": clave}, format="json")
+
+    def api_con_token(self, token):
+        api = APIClient()
+        api.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+        return api
+
+
+class LoginSedesTests(IntegracionBase):
+
+    def test_admin_recibe_token_en_el_formato_acordado(self):
+        r = self.token_integracion(correo="ADMIN@tienda.com")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(list(r.data), ["token", "tipo", "expira_en", "usuario"])
+        self.assertEqual(r.data["tipo"], "Bearer")
+        self.assertEqual(r.data["expira_en"], 8 * 3600)
+        self.assertEqual(r.data["usuario"]["rol"], "administrador")
+
+    def test_errores_en_el_formato_acordado(self):
+        casos = [
+            ({"correo": "admin@tienda.com"}, 400),
+            ({"correo": "admin@tienda.com", "clave": "mala"}, 401),
+            ({"correo": "nadie@tienda.com", "clave": CLAVE}, 401),
+            ({"correo": "vendedor@tienda.com", "clave": CLAVE}, 403),
+            ({"correo": "cliente@mail.com", "clave": CLAVE}, 403),
+        ]
+        for cuerpo, codigo in casos:
+            r = self.anon.post("/api/login", cuerpo, format="json")
+            self.assertEqual(r.status_code, codigo, cuerpo)
+            self.assertIn("error", r.data, cuerpo)
+
+    def test_acepta_la_ruta_con_barra(self):
+        r = self.anon.post("/api/login/", {"correo": "admin@tienda.com", "clave": CLAVE}, format="json")
+        self.assertEqual(r.status_code, 200)
+
+    def test_token_de_integracion_no_administra_la_tienda(self):
+        """El token dura horas: solo debe servir para leer facturas."""
+        api = self.api_con_token(self.token_integracion().data["token"])
+        self.assertEqual(api.get("/api/facturas").status_code, 200)
+        self.assertEqual(api.get("/api/ventas/").status_code, 401)
+        self.assertEqual(api.delete(f"/api/piezas/{self.pieza.pk}/").status_code, 401)
+        self.assertEqual(api.post(f"/api/ventas/{self.venta['id_venta']}/anular/").status_code, 401)
+
+
+class FacturasSedesTests(IntegracionBase):
+
+    def setUp(self):
+        super().setUp()
+        self.api = self.api_con_token(self.token_integracion().data["token"])
+
+    def test_estructura_igual_a_la_de_repuauto(self):
+        d = self.api.get("/api/facturas").data
+        self.assertEqual(
+            list(d), ["sucursal", "desde", "hasta", "moneda", "iva_porcentaje", "resumen", "facturas"]
+        )
+        self.assertEqual(d["moneda"], "COP")
+        self.assertEqual(d["iva_porcentaje"], 19)
+        for f in d["facturas"]:
+            self.assertEqual(list(f), CAMPOS_FACTURA)
+            self.assertEqual(list(f["tercero"]), ["documento", "nombre"])
+            self.assertRegex(f["numero"], r"^[VC]-\d{6}$")
+            self.assertRegex(f["fecha"], r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}-05:00$")
+            self.assertRegex(f["total"], r"^\d+\.\d{2}$")
+            self.assertEqual(Decimal(f["subtotal"]) + Decimal(f["iva"]), Decimal(f["total"]))
+
+    def test_solo_ventas_activas_y_todas_las_compras(self):
+        r = self.api.get("/api/facturas").data["resumen"]
+        self.assertEqual(r["venta"]["cantidad"], 2)
+        self.assertEqual(Decimal(r["venta"]["total"]), Decimal("300.00"))
+        self.assertEqual(r["compra"]["cantidad"], 1)
+        self.assertEqual(Decimal(r["compra"]["total"]), Decimal("297.50"))
+
+    def test_iva_incluido(self):
+        compra = [f for f in self.api.get("/api/facturas").data["facturas"] if f["tipo"] == "compra"][0]
+        self.assertEqual(compra["subtotal"], "250.00")
+        self.assertEqual(compra["iva"], "47.50")
+        self.assertEqual(compra["tercero"], {"documento": "900123456-7", "nombre": "Mayorista"})
+
+    def test_tercero_de_las_ventas(self):
+        ventas = self.api.get("/api/facturas?tipo=venta").data["facturas"]
+        documentos = {f["tercero"]["documento"] for f in ventas}
+        self.assertEqual(documentos, {"1098000001", "222222222222"})
+        self.assertEqual(ventas[0]["numero"], f"V-{self.venta['id_venta']:06d}")
+
+    def test_filtro_por_tipo(self):
+        d = self.api.get("/api/facturas?tipo=compra").data
+        self.assertEqual(list(d["resumen"]), ["compra"])
+        self.assertTrue(all(f["tipo"] == "compra" for f in d["facturas"]))
+
+    def test_rango_sin_facturas(self):
+        d = self.api.get("/api/facturas?desde=2020-01-01&hasta=2020-01-31").data
+        self.assertEqual(d["facturas"], [])
+        self.assertEqual(
+            d["resumen"]["venta"], {"cantidad": 0, "subtotal": "0.00", "iva": "0.00", "total": "0.00"}
+        )
+
+    def test_errores(self):
+        for query in ("tipo=otro", "desde=2026-13-01", "desde=2026-05-10&hasta=2026-05-01"):
+            r = self.api.get(f"/api/facturas?{query}")
+            self.assertEqual(r.status_code, 400, query)
+            self.assertIn("error", r.data)
+        r = self.anon.get("/api/facturas")
+        self.assertEqual(r.status_code, 401)
+        self.assertIn("error", r.data)
+
+    def test_token_normal_del_administrador_tambien_sirve(self):
+        self.assertEqual(self.admin_api.get("/api/facturas").status_code, 200)
+        r = self.vend_api.get("/api/facturas")
+        self.assertEqual(r.status_code, 403)
+        self.assertEqual(r.data, {"error": "Solo un administrador puede usar la API."})
+
+
+class ProveedorNitTests(BaseAPITest):
+
+    def test_nit_vacio_se_guarda_como_nulo_y_no_choca(self):
+        for nombre in ("A", "B"):
+            r = self.admin_api.post("/api/proveedores/", {"nombre": nombre, "nit": " "}, format="json")
+            self.assertEqual(r.status_code, 201)
+            self.assertIsNone(r.data["nit"])
+
+    def test_nit_invalido_o_repetido(self):
+        r = self.admin_api.post("/api/proveedores/", {"nombre": "X", "nit": "ABC"}, format="json")
+        self.assertEqual(r.status_code, 400)
+        self.admin_api.post("/api/proveedores/", {"nombre": "Y", "nit": "900111222-3"}, format="json")
+        r = self.admin_api.post("/api/proveedores/", {"nombre": "Z", "nit": "900111222-3"}, format="json")
+        self.assertEqual(r.status_code, 400)
+
+
+# Respuesta de ejemplo de la documentación de RepuAuto (docs/API.md de su repositorio).
+FACTURAS_REPUAUTO = {
+    "sucursal": "Bucaramanga",
+    "desde": "2026-10-01",
+    "hasta": "2026-10-31",
+    "moneda": "COP",
+    "iva_porcentaje": 19,
+    "resumen": {},
+    "facturas": [
+        {"tipo": "compra", "numero": "C-000045", "fecha": "2026-10-04T09:30:00-05:00",
+         "tercero": {"documento": "900123456-7", "nombre": "Autopartes del Oriente S.A.S."},
+         "subtotal": "567226.89", "iva": "107773.11", "total": "675000.00"},
+        {"tipo": "venta", "numero": "V-000123", "fecha": "2026-10-30T10:15:00-05:00",
+         "tercero": {"documento": "1098000001", "nombre": "Carlos Andrés Rueda Pinzón"},
+         "subtotal": "100000.00", "iva": "19000.00", "total": "119000.00"},
+    ],
+}
+
+REPUAUTO_PRUEBA = {"URL": "http://repuauto.test/api", "CORREO": "integracion@repuauto.com",
+                   "CLAVE": "clave", "TIMEOUT": 2}
+
+
+def respuesta_falsa(codigo, datos):
+    r = mock.Mock(status_code=codigo)
+    r.json.return_value = datos
+    return r
+
+
+def api_repuauto(facturas=FACTURAS_REPUAUTO, codigo_facturas=200):
+    """Simula la API de RepuAuto: login devuelve un token y facturas el JSON dado."""
+    def responder(metodo, url, **kwargs):
+        if url.endswith("/login"):
+            return respuesta_falsa(200, {"token": "tok", "tipo": "Bearer", "expira_en": 28800})
+        return respuesta_falsa(codigo_facturas, facturas)
+    return mock.patch("inventario.integraciones.repuauto.requests.request", side_effect=responder)
+
+
+class ConsolidadoTests(IntegracionBase):
+
+    URL = "/api/consolidado/?desde=2020-01-01&hasta=2030-12-31"
+
+    def test_solo_administrador(self):
+        self.assertEqual(self.vend_api.get(self.URL).status_code, 403)
+        self.assertEqual(self.cli_api.get(self.URL).status_code, 403)
+        self.assertEqual(self.anon.get(self.URL).status_code, 401)
+
+    @override_settings(REPUAUTO={"URL": "", "CORREO": "", "CLAVE": "", "TIMEOUT": 2})
+    def test_sin_configurar_muestra_solo_esta_sede(self):
+        d = self.admin_api.get(self.URL).data
+        self.assertEqual([s["estado"] for s in d["sedes"]], ["ok", "sin_configurar"])
+        self.assertEqual(d["total"]["venta"]["cantidad"], 2)
+
+    @override_settings(REPUAUTO=REPUAUTO_PRUEBA)
+    def test_junta_las_dos_sedes(self):
+        with api_repuauto() as falso:
+            d = self.admin_api.get(self.URL).data
+            self.admin_api.get(self.URL)
+        self.assertEqual([s["estado"] for s in d["sedes"]], ["ok", "ok"])
+        self.assertEqual(d["sedes"][1]["sucursal"], "Bucaramanga")
+        self.assertEqual(d["total"]["venta"]["cantidad"], 3)
+        self.assertEqual(Decimal(d["total"]["venta"]["total"]), Decimal("119300.00"))
+        self.assertEqual(Decimal(d["total"]["compra"]["total"]), Decimal("675297.50"))
+        self.assertEqual({f["sucursal"] for f in d["facturas"]}, {"PC Stock", "Bucaramanga"})
+        # El token se guarda: dos consultas, un solo inicio de sesión.
+        logins = [c for c in falso.call_args_list if c.args[1].endswith("/login")]
+        self.assertEqual(len(logins), 1)
+        cabeceras = falso.call_args_list[-1].kwargs["headers"]
+        self.assertEqual(cabeceras["Authorization"], "Bearer tok")
+        # Salta la página de aviso de ngrok gratis (si no, llega HTML en vez de JSON).
+        self.assertEqual(cabeceras["ngrok-skip-browser-warning"], "1")
+
+    @override_settings(REPUAUTO=REPUAUTO_PRUEBA)
+    def test_otra_sede_caida_no_tumba_el_consolidado(self):
+        with mock.patch("inventario.integraciones.repuauto.requests.request",
+                        side_effect=requests.ConnectionError):
+            r = self.admin_api.get(self.URL)
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.data["sedes"][1]["estado"], "error")
+        self.assertIn("No se pudo conectar", r.data["sedes"][1]["error"])
+        self.assertEqual(r.data["total"]["venta"]["cantidad"], 2)
+
+    @override_settings(REPUAUTO=REPUAUTO_PRUEBA)
+    def test_renueva_el_token_vencido_una_vez(self):
+        respuestas = iter([
+            respuesta_falsa(200, {"token": "viejo", "expira_en": 28800}),
+            respuesta_falsa(401, {"error": "El token venció."}),
+            respuesta_falsa(200, {"token": "nuevo", "expira_en": 28800}),
+            respuesta_falsa(200, FACTURAS_REPUAUTO),
+        ])
+        with mock.patch("inventario.integraciones.repuauto.requests.request",
+                        side_effect=lambda *a, **k: next(respuestas)):
+            d = self.admin_api.get(self.URL).data
+        self.assertEqual(d["sedes"][1]["estado"], "ok")
+
+    @override_settings(REPUAUTO=REPUAUTO_PRUEBA)
+    def test_respuesta_con_formato_distinto(self):
+        with api_repuauto(facturas={"datos": []}):
+            d = self.admin_api.get(self.URL).data
+        self.assertEqual(d["sedes"][1]["estado"], "error")
+        self.assertIn("formato acordado", d["sedes"][1]["error"])
+
+    @override_settings(REPUAUTO=REPUAUTO_PRUEBA)
+    def test_ignora_facturas_ilegibles_de_la_otra_sede(self):
+        malas = {**FACTURAS_REPUAUTO, "facturas": FACTURAS_REPUAUTO["facturas"] + [
+            {"tipo": "venta", "numero": "V-9", "total": "mucho", "subtotal": "x", "iva": "y"},
+            {"tipo": "devolucion", "numero": "D-1", "total": "1.00", "subtotal": "1.00", "iva": "0.00"},
+        ]}
+        with api_repuauto(facturas=malas):
+            d = self.admin_api.get(self.URL).data
+        self.assertEqual(d["sedes"][1]["resumen"]["venta"]["cantidad"], 1)

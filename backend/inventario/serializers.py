@@ -151,6 +151,15 @@ class ProveedorSerializer(serializers.ModelSerializer):
         model = Proveedor
         fields = "__all__"
 
+    def validate_nit(self, value):
+        """Sin espacios; vacío se guarda como NULL para que varios proveedores puedan no tenerlo."""
+        value = (value or "").strip()
+        if not value:
+            return None
+        if not all(c.isdigit() or c == "-" for c in value) or not any(c.isdigit() for c in value):
+            raise serializers.ValidationError("El NIT solo puede tener números y un guion, p. ej. 900123456-7.")
+        return value
+
 
 class LoteCompraSerializer(serializers.ModelSerializer):
     class Meta:

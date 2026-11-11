@@ -103,6 +103,9 @@ class Pieza(models.Model):
 class Proveedor(models.Model):
     id_proveedor = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=150)
+    # NIT con dígito de verificación (p. ej. 900123456-7). Va en las facturas de compra
+    # que se comparten con la otra sede. Opcional para no romper proveedores existentes.
+    nit = models.CharField(max_length=20, unique=True, blank=True, null=True)
     telefono = models.CharField(max_length=20, blank=True, null=True)
     contacto = models.CharField(max_length=100, blank=True, null=True)
 

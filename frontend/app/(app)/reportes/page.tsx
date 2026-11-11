@@ -5,71 +5,9 @@ import { FormEvent, useMemo, useState } from "react";
 import { Encabezado, EstadoCarga } from "../../../components/ui";
 import type { Reporte } from "../../../lib/api";
 import { fecha, fechaConHora, NOMBRE_CONDICION, NOMBRE_PAGO, precio } from "../../../lib/formato";
+import { atajo as rangoDeAtajo, ATAJOS, descargarCsv as guardarCsv, type Rango } from "../../../lib/rangos";
 import { useRequiereSesion } from "../../../lib/session";
 import { useDatos } from "../../../lib/useDatos";
-
-// ---------------------------------------------------------------------------
-// Rango de fechas
-// ---------------------------------------------------------------------------
-
-/** Fecha local en formato AAAA-MM-DD (sin pasar por UTC). */
-function iso(d: Date) {
-  const mes = String(d.getMonth() + 1).padStart(2, "0");
-  const dia = String(d.getDate()).padStart(2, "0");
-  return `${d.getFullYear()}-${mes}-${dia}`;
-}
-
-type Rango = { desde: string; hasta: string };
-
-const ATAJOS: { id: string; texto: string; rango: () => Rango }[] = [
-  {
-    id: "7",
-    texto: "7 días",
-    rango: () => {
-      const hoy = new Date();
-      const desde = new Date(hoy);
-      desde.setDate(hoy.getDate() - 6);
-      return { desde: iso(desde), hasta: iso(hoy) };
-    },
-  },
-  {
-    id: "30",
-    texto: "30 días",
-    rango: () => {
-      const hoy = new Date();
-      const desde = new Date(hoy);
-      desde.setDate(hoy.getDate() - 29);
-      return { desde: iso(desde), hasta: iso(hoy) };
-    },
-  },
-  {
-    id: "mes",
-    texto: "Este mes",
-    rango: () => {
-      const hoy = new Date();
-      return { desde: iso(new Date(hoy.getFullYear(), hoy.getMonth(), 1)), hasta: iso(hoy) };
-    },
-  },
-  {
-    id: "mes-anterior",
-    texto: "Mes anterior",
-    rango: () => {
-      const hoy = new Date();
-      return {
-        desde: iso(new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1)),
-        hasta: iso(new Date(hoy.getFullYear(), hoy.getMonth(), 0)),
-      };
-    },
-  },
-  {
-    id: "anio",
-    texto: "Este año",
-    rango: () => {
-      const hoy = new Date();
-      return { desde: iso(new Date(hoy.getFullYear(), 0, 1)), hasta: iso(hoy) };
-    },
-  },
-];
 
 // ---------------------------------------------------------------------------
 // Formatos propios del informe
@@ -100,17 +38,12 @@ function Variacion({ valor }: { valor: number | null }) {
 // Exportación a CSV (se abre en Excel con tildes y separador ";")
 // ---------------------------------------------------------------------------
 
-function celda(valor: string | number | null | undefined) {
-  const texto = valor === null || valor === undefined ? "" : String(valor);
-  return /[";\n]/.test(texto) ? `"${texto.replace(/"/g, '""')}"` : texto;
-}
-
 /** Pesos enteros: Excel en español confunde el punto decimal con miles. */
 function pesos(valor: string | null) {
   return valor === null ? "" : Math.round(Number(valor)).toString();
 }
 
-function descargarCsv(r: Reporte) {
+function exportarCsv(r: Reporte) {
   const filas: (string | number | null)[][] = [];
   const seccion = (titulo: string, encabezados: string[], datos: (string | number | null)[][]) => {
     filas.push([titulo], encabezados, ...datos, []);
@@ -160,13 +93,7 @@ function descargarCsv(r: Reporte) {
   seccion("Piezas sin ventas en el periodo", ["Pieza", "Categoría", "Stock", "Valor en stock"],
     r.inventario.sin_movimiento.map((p) => [p.nombre, p.categoria, p.stock, pesos(p.valor_venta)]));
 
-  const contenido = "﻿" + filas.map((f) => f.map(celda).join(";")).join("\r\n");
-  const url = URL.createObjectURL(new Blob([contenido], { type: "text/csv;charset=utf-8" }));
-  const enlace = document.createElement("a");
-  enlace.href = url;
-  enlace.download = `informe-pcstock_${r.rango.desde}_${r.rango.hasta}.csv`;
-  enlace.click();
-  URL.revokeObjectURL(url);
+  guardarCsv(`informe-pcstock_${r.rango.desde}_${r.rango.hasta}.csv`, filas);
 }
 
 // ---------------------------------------------------------------------------
@@ -233,7 +160,7 @@ function Barras({ filas }: { filas: { clave: string; nombre: string; valor: stri
 export default function ReportesPage() {
   const usuario = useRequiereSesion(["administrador"]);
 
-  const inicial = ATAJOS[1].rango();
+  const inicial = rangoDeAtajo("30");
   const [rango, setRango] = useState<Rango>(inicial);
   const [borrador, setBorrador] = useState<Rango>(inicial);
   const [atajo, setAtajo] = useState("30");
@@ -243,7 +170,7 @@ export default function ReportesPage() {
   const r = reporte.datos;
 
   function elegirAtajo(id: string) {
-    const nuevo = ATAJOS.find((a) => a.id === id)!.rango();
+    const nuevo = rangoDeAtajo(id);
     setAtajo(id);
     setBorrador(nuevo);
     setRango(nuevo);
@@ -293,7 +220,7 @@ export default function ReportesPage() {
             : "Ventas, utilidad, inventario y compras del periodo que elijas."
         }
       >
-        <button type="button" className="boton secundario" disabled={!r} onClick={() => r && descargarCsv(r)}>
+        <button type="button" className="boton secundario" disabled={!r} onClick={() => r && exportarCsv(r)}>
           Descargar CSV
         </button>
         <button type="button" className="boton" disabled={!r} onClick={() => window.print()}>

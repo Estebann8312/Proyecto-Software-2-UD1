@@ -123,7 +123,8 @@ DATABASES = {
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        # JWT normal; rechaza los tokens de integración (ver inventario/autenticacion.py).
+        "inventario.autenticacion.JWTSinIntegracion",
         # Sesión: solo para usar la API navegable de DRF desde el navegador.
         "rest_framework.authentication.SessionAuthentication",
     ),
@@ -140,6 +141,28 @@ REST_FRAMEWORK = {
 
 SIMPLE_JWT = {
     "UPDATE_LAST_LOGIN": True,
+}
+
+
+# -------------------------------------------------------------------
+# Integración entre sedes (ver CONTRATO-INTEGRACION.md)
+# -------------------------------------------------------------------
+
+# Cómo se presenta esta sede en GET /api/facturas.
+INTEGRACION = {
+    "SUCURSAL": os.environ.get("INTEGRACION_SUCURSAL", "PC Stock"),
+    "IVA": float(os.environ.get("INTEGRACION_IVA", "19")),
+    "TOKEN_HORAS": float(os.environ.get("INTEGRACION_TOKEN_HORAS", "8")),
+}
+if INTEGRACION["IVA"].is_integer():
+    INTEGRACION["IVA"] = int(INTEGRACION["IVA"])
+
+# API de la otra sede (RepuAuto). Sin URL, el consolidado muestra solo esta sede.
+REPUAUTO = {
+    "URL": os.environ.get("REPUAUTO_URL", "").strip(),
+    "CORREO": os.environ.get("REPUAUTO_CORREO", "").strip(),
+    "CLAVE": os.environ.get("REPUAUTO_CLAVE", ""),
+    "TIMEOUT": float(os.environ.get("REPUAUTO_TIMEOUT", "6")),
 }
 
 

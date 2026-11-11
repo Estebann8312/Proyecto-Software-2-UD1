@@ -48,7 +48,10 @@ export default function ProveedoresPage() {
             <tbody>
               {proveedores.datos.map((p) => (
                 <tr key={p.id_proveedor}>
-                  <td className="principal-celda">{p.nombre}</td>
+                  <td>
+                    <span className="principal-celda">{p.nombre}</span>
+                    <span className="sub cifras">{p.nit ? `NIT ${p.nit}` : "Sin NIT"}</span>
+                  </td>
                   <td>{p.contacto ?? "—"}</td>
                   <td className="cifras">{p.telefono ?? "—"}</td>
                   {esAdmin && (
@@ -100,6 +103,7 @@ export default function ProveedoresPage() {
 function FormProveedor({ proveedor, alGuardar }: { proveedor?: Proveedor; alGuardar: (p: Proveedor) => void }) {
   const [form, setForm] = useState({
     nombre: proveedor?.nombre ?? "",
+    nit: proveedor?.nit ?? "",
     contacto: proveedor?.contacto ?? "",
     telefono: proveedor?.telefono ?? "",
   });
@@ -110,7 +114,7 @@ function FormProveedor({ proveedor, alGuardar }: { proveedor?: Proveedor; alGuar
     e.preventDefault();
     setError("");
     setEnviando(true);
-    const cuerpo = { nombre: form.nombre, contacto: form.contacto || null, telefono: form.telefono || null };
+    const cuerpo = { nombre: form.nombre, nit: form.nit.trim() || null, contacto: form.contacto || null, telefono: form.telefono || null };
     try {
       alGuardar(
         proveedor
@@ -125,9 +129,15 @@ function FormProveedor({ proveedor, alGuardar }: { proveedor?: Proveedor; alGuar
 
   return (
     <form className="formulario" onSubmit={guardar}>
-      <Campo id="pr-nombre" etiqueta="Nombre">
-        <input id="pr-nombre" className="control" required maxLength={150} value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} />
-      </Campo>
+      <div className="fila-campos">
+        <Campo id="pr-nombre" etiqueta="Nombre">
+          <input id="pr-nombre" className="control" required maxLength={150} value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} />
+        </Campo>
+        <Campo id="pr-nit" etiqueta="NIT" ayuda="Con dígito de verificación. Va en las facturas de compra que se comparten con la otra sede.">
+          <input id="pr-nit" className="control cifras" maxLength={20} inputMode="numeric" placeholder="900123456-7"
+            value={form.nit} onChange={(e) => setForm({ ...form, nit: e.target.value })} />
+        </Campo>
+      </div>
       <div className="fila-campos">
         <Campo id="pr-contacto" etiqueta="Persona de contacto (opcional)">
           <input id="pr-contacto" className="control" maxLength={100} value={form.contacto} onChange={(e) => setForm({ ...form, contacto: e.target.value })} />

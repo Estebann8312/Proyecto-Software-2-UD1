@@ -55,26 +55,31 @@ with transaction.atomic():
     proveedores_data = [
         {
             "nombre": "TechDistribuciones Mayorista S.A.S.",
+            "nit": "900456789-1",
             "telefono": "3104567890",
             "contacto": "Alvaro Mendoza - Gerente Comercial",
         },
         {
             "nombre": "Global Chipset & Hardware Latam",
+            "nit": "901234567-8",
             "telefono": "3158901234",
             "contacto": "Paola Andrea Silva - Ventas Corporativas",
         },
         {
             "nombre": "Andes Componentes del Norte",
+            "nit": "800987654-3",
             "telefono": "3012345678",
             "contacto": "Rodrigo Cárdenas - Representante de Marca",
         },
         {
             "nombre": "Silicio Express Importaciones",
+            "nit": "900765432-5",
             "telefono": "3207890123",
             "contacto": "Mónica Tatiana Duarte - Logística y Ventas",
         },
         {
             "nombre": "PC Master Wholesale Distributors",
+            "nit": "901876543-2",
             "telefono": "3186543210",
             "contacto": "Fabián Leonardo Gómez - Cuentas Clave",
         },

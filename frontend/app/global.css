@@ -1440,6 +1440,57 @@ tr.anulada td {
 }
 
 /* --------------------------------------------------------------------------
+   Sedes: consolidado con la sede aliada
+   -------------------------------------------------------------------------- */
+
+.sedes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.sede {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.sede header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sede h3 {
+  font-size: var(--t-titulo);
+  letter-spacing: -0.02em;
+}
+
+.datos-sede {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.datos-sede dt {
+  color: var(--tinta-2);
+  font-size: var(--t-pequeno);
+}
+
+.datos-sede dd {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+@media (max-width: 860px) {
+  .sedes {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* --------------------------------------------------------------------------
    Diálogos: lo que flota lleva sombra y el fondo se desenfoca
    -------------------------------------------------------------------------- */
 
