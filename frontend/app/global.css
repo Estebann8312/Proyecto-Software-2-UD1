@@ -22,9 +22,19 @@
   --peligro: #c0262b;
   --peligro-suave: #fde8e7;
 
-  /* Material translúcido de la barra lateral */
+  /* Material translúcido (diálogos y barras flotantes) */
   --material: rgb(246 246 248 / 72%);
   --desenfoque: saturate(180%) blur(20px);
+
+  /* Barra lateral oscura: verde muy profundo derivado del acento */
+  --lateral-fondo: #0e2a21;
+  --lateral-fondo-2: #133429;
+  --lateral-linea: rgb(255 255 255 / 8%);
+  --lateral-tinta: #e9f1ed;
+  --lateral-tinta-2: #93ada1;
+  --lateral-hover: rgb(255 255 255 / 6%);
+  --lateral-activo: rgb(255 255 255 / 11%);
+  --lateral-acento: #7fd6aa;
 
   /* Radios concéntricos: el interior siempre es menor que su contenedor */
   --radio-pequeno: 8px;
@@ -431,12 +441,10 @@ textarea.control {
   min-height: 100vh;
 }
 
-/* Barra lateral: material translúcido con una línea fina que la separa. */
+/* Barra lateral oscura: contrasta con el contenido claro y agrupa el menú por temas. */
 .lateral {
-  border-right: 1px solid var(--linea-suave);
-  background: var(--material);
-  -webkit-backdrop-filter: var(--desenfoque);
-  backdrop-filter: var(--desenfoque);
+  background: var(--lateral-fondo);
+  color: var(--lateral-tinta);
 }
 
 .lateral-interior {
@@ -445,32 +453,47 @@ textarea.control {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  padding: 22px 12px;
-}
-
-.lateral .boton.secundario {
-  width: 100%;
-  background: var(--superficie-2);
-}
-
-.lateral .boton.secundario:hover {
-  background: var(--superficie-3);
+  padding: 22px 12px 16px;
+  overflow-y: auto;
 }
 
 .lateral .marca {
-  margin: 0 10px 30px;
+  margin: 0 10px 26px;
+  color: var(--lateral-tinta);
+}
+
+.lateral .marca::before {
+  background: var(--lateral-acento);
 }
 
 .navegacion {
   display: grid;
+  gap: 18px;
+}
+
+.grupo-navegacion {
+  display: grid;
   gap: 2px;
 }
 
+.titulo-grupo {
+  padding: 0 12px 6px;
+  color: var(--lateral-tinta-2);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 .navegacion a {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 11px;
   padding: 8px 12px;
   border-radius: var(--radio-pequeno);
-  color: var(--tinta);
-  font-weight: 450;
+  color: var(--lateral-tinta-2);
+  font-weight: 500;
   text-decoration: none;
   transition:
     background var(--rapido) ease,
@@ -478,8 +501,14 @@ textarea.control {
     transform var(--medio) var(--resorte-rebote);
 }
 
+.navegacion .icono {
+  flex: none;
+  transition: color var(--rapido) ease;
+}
+
 .navegacion a:hover {
-  background: rgb(0 0 0 / 5%);
+  background: var(--lateral-hover);
+  color: var(--lateral-tinta);
 }
 
 .navegacion a:active {
@@ -487,28 +516,102 @@ textarea.control {
   transition-duration: 0.08s;
 }
 
+/* Activa: fondo más claro, texto blanco y una barrita verde a la izquierda. */
 .navegacion a[aria-current="page"] {
-  background: var(--acento);
+  background: var(--lateral-activo);
   color: #fff;
-  font-weight: 500;
+}
+
+.navegacion a[aria-current="page"] .icono {
+  color: var(--lateral-acento);
+}
+
+.navegacion a[aria-current="page"]::before {
+  content: "";
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: -12px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--lateral-acento);
+}
+
+.lateral :focus-visible {
+  outline-color: rgb(127 214 170 / 55%);
 }
 
 .cuenta-usuario {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   margin-top: auto;
-  padding: 14px 10px 0;
-  border-top: 1px solid var(--linea-suave);
+  padding: 12px 8px 0;
+  border-top: 1px solid var(--lateral-linea);
 }
 
-.cuenta-usuario strong {
+.avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--acento);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.datos-cuenta {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.datos-cuenta strong,
+.datos-cuenta span {
   display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.datos-cuenta strong {
+  color: var(--lateral-tinta);
+  font-size: 14px;
   font-weight: 600;
 }
 
-.cuenta-usuario span {
-  display: block;
-  margin-bottom: 10px;
-  color: var(--tinta-2);
-  font-size: var(--t-pequeno);
+.datos-cuenta span {
+  color: var(--lateral-tinta-2);
+  font-size: 12px;
+}
+
+.boton-salir {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: var(--radio-pequeno);
+  background: none;
+  color: var(--lateral-tinta-2);
+  transition:
+    background var(--rapido) ease,
+    color var(--rapido) ease,
+    transform var(--medio) var(--resorte-rebote);
+}
+
+.boton-salir:hover {
+  background: var(--lateral-hover);
+  color: #fff;
+}
+
+.boton-salir:active {
+  transform: scale(0.92);
+  transition-duration: 0.08s;
 }
 
 .principal {
@@ -1674,17 +1777,11 @@ dialog.dialogo::backdrop {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  /* En celular la barra queda fija arriba y el contenido pasa por debajo. */
+  /* En celular la barra queda fija arriba, oscura, y el menú se desplaza de lado. */
   .lateral {
     position: sticky;
     top: 0;
     z-index: 10;
-    border-right: 0;
-    border-bottom: 1px solid var(--linea-suave);
-  }
-
-  .lateral .boton.secundario {
-    width: auto;
   }
 
   .lateral-interior {
@@ -1694,7 +1791,8 @@ dialog.dialogo::backdrop {
     align-items: center;
     gap: 10px 16px;
     height: auto;
-    padding: 14px 16px;
+    padding: 12px 16px 10px;
+    overflow: visible;
   }
 
   .lateral .marca {
@@ -1704,24 +1802,46 @@ dialog.dialogo::backdrop {
   .navegacion {
     order: 3;
     display: flex;
+    gap: 2px;
     width: 100%;
     overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .navegacion::-webkit-scrollbar {
+    display: none;
+  }
+
+  .grupo-navegacion {
+    display: contents;
+  }
+
+  .titulo-grupo {
+    display: none;
   }
 
   .navegacion a {
+    flex: none;
     white-space: nowrap;
   }
 
-  .cuenta-usuario {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin: 0 0 0 auto;
-    padding: 0;
+  .navegacion a[aria-current="page"]::before {
+    top: auto;
+    right: 12px;
+    bottom: 0;
+    left: 12px;
+    width: auto;
+    height: 2px;
+    border-radius: 2px 2px 0 0;
   }
 
-  .cuenta-usuario strong,
-  .cuenta-usuario span {
+  .cuenta-usuario {
+    margin: 0 0 0 auto;
+    padding: 0;
+    border: 0;
+  }
+
+  .datos-cuenta {
     display: none;
   }
 
