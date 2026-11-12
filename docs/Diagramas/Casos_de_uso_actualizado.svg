@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1340" height="1130" viewBox="0 0 1340 1130" font-family="Arial, Helvetica, sans-serif" role="img" aria-label="Diagrama de casos de uso de PC Stock">
+<defs><marker id="abierta" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="11" markerHeight="11" orient="auto-start-reverse"><path d="M1 1 L11 6 L1 11" fill="none" stroke="#5f6368" stroke-width="1.4"/></marker></defs>
+<rect width="1340" height="1130" fill="#ffffff"/>
+<rect x="200" y="40" width="940" height="1080" fill="#ffffff" stroke="#1d1d1f" stroke-width="1.6"/>
+<text x="670" y="68" font-size="17" font-weight="bold" fill="#1d1d1f" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">PC Stock · Sistema de inventario y ventas de piezas de PC</text>
+<rect x="225" y="90" width="229" height="22" fill="#f6f8f7" stroke="#9aa5a0" stroke-width="1"/>
+<rect x="225" y="112" width="890" height="238" fill="#f6f8f7" stroke="#9aa5a0" stroke-width="1"/>
+<text x="233" y="106" font-size="13" font-weight="bold" fill="#1e5b46" font-family="Arial, Helvetica, sans-serif">Catálogo y cuenta del cliente</text>
+<rect x="225" y="365" width="58" height="22" fill="#f6f8f7" stroke="#9aa5a0" stroke-width="1"/>
+<rect x="225" y="387" width="890" height="158" fill="#f6f8f7" stroke="#9aa5a0" stroke-width="1"/>
+<text x="233" y="381" font-size="13" font-weight="bold" fill="#1e5b46" font-family="Arial, Helvetica, sans-serif">Ventas</text>
+<rect x="225" y="562" width="236" height="22" fill="#f6f8f7" stroke="#9aa5a0" stroke-width="1"/>
+<rect x="225" y="584" width="890" height="308" fill="#f6f8f7" stroke="#9aa5a0" stroke-width="1"/>
+<text x="233" y="578" font-size="13" font-weight="bold" fill="#1e5b46" font-family="Arial, Helvetica, sans-serif">Inventario, compras y personas</text>
+<rect x="225" y="908" width="266" height="22" fill="#f6f8f7" stroke="#9aa5a0" stroke-width="1"/>
+<rect x="225" y="930" width="890" height="180" fill="#f6f8f7" stroke="#9aa5a0" stroke-width="1"/>
+<text x="233" y="924" font-size="13" font-weight="bold" fill="#1e5b46" font-family="Arial, Helvetica, sans-serif">Análisis e integración entre sedes</text>
+<rect x="830" y="120" width="270" height="74" rx="3" fill="#fffbe6" stroke="#c9b458" stroke-width="1"/>
+<text x="844" y="143" font-size="12.5" fill="#1d1d1f" font-family="Arial, Helvetica, sans-serif">Vendedor y administrador también</text>
+<text x="844" y="161" font-size="12.5" fill="#1d1d1f" font-family="Arial, Helvetica, sans-serif">inician sesión. El administrador puede</text>
+<text x="844" y="179" font-size="12.5" fill="#1d1d1f" font-family="Arial, Helvetica, sans-serif">hacer todo lo que hace el vendedor.</text>
+<line x1="101.0" y1="214.0" x2="322.4" y2="284.5" stroke="#1d1d1f" stroke-width="1.3" />
+<line x1="101.0" y1="214.0" x2="280.2" y2="222.7" stroke="#1d1d1f" stroke-width="1.3" />
+<line x1="101.0" y1="214.0" x2="307.5" y2="168.3" stroke="#1d1d1f" stroke-width="1.3" />
+<line x1="101.0" y1="544.0" x2="358.5" y2="331.9" stroke="#1d1d1f" stroke-width="1.3" />
+<line x1="101.0" y1="544.0" x2="335.1" y2="443.5" stroke="#1d1d1f" stroke-width="1.3" />
+<line x1="101.0" y1="544.0" x2="324.2" y2="618.1" stroke="#1d1d1f" stroke-width="1.3" />
+<line x1="1259.0" y1="744.0" x2="1062.0" y2="420.0" stroke="#1d1d1f" stroke-width="1.3" />
+<line x1="1259.0" y1="744.0" x2="1062.0" y2="672.0" stroke="#1d1d1f" stroke-width="1.3" />
+<line x1="1259.0" y1="744.0" x2="1062.0" y2="734.0" stroke="#1d1d1f" stroke-width="1.3" />
+<line x1="1259.0" y1="744.0" x2="1062.0" y2="610.0" stroke="#1d1d1f" stroke-width="1.3" />
+<line x1="1259.0" y1="744.0" x2="1062.0" y2="796.0" stroke="#1d1d1f" stroke-width="1.3" />
+<line x1="1259.0" y1="744.0" x2="1062.0" y2="858.0" stroke="#1d1d1f" stroke-width="1.3" />
+<line x1="1259.0" y1="744.0" x2="1062.0" y2="950.0" stroke="#1d1d1f" stroke-width="1.3" />
+<line x1="1259.0" y1="744.0" x2="1062.0" y2="1016.0" stroke="#1d1d1f" stroke-width="1.3" />
+<line x1="1239.0" y1="1039.0" x2="1056.4" y2="1024.5" stroke="#1d1d1f" stroke-width="1.3" />
+<line x1="1239.0" y1="1039.0" x2="790.7" y2="1055.8" stroke="#1d1d1f" stroke-width="1.3" />
+<ellipse cx="390" cy="306" rx="112" ry="27" fill="#ffffff" stroke="#1d1d1f" stroke-width="1.3"/>
+<text x="390" y="303.0" font-size="13" fill="#1d1d1f" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">Consultar catálogo</text>
+<text x="390" y="318.0" font-size="13" fill="#1d1d1f" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">de piezas</text>
+<ellipse cx="390" cy="228" rx="112" ry="27" fill="#ffffff" stroke="#1d1d1f" stroke-width="1.3"/>
+<text x="390" y="225.0" font-size="13" fill="#1d1d1f" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">Registrar cuenta</text>
+<text x="390" y="240.0" font-size="13" fill="#1d1d1f" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">de cliente</text>
+<ellipse cx="390" cy="150" rx="112" ry="27" fill="#ffffff" stroke="#1d1d1f" stroke-width="1.3"/>
+<text x="390" y="147.0" font-size="13" fill="#1d1d1f" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">Consultar historial</text>
+<text x="390" y="162.0" font-size="13" fill="#1d1d1f" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">de compras</text>
+<ellipse cx="680" cy="228" rx="112" ry="27" fill="#ffffff" stroke="#1d1d1f" stroke-width="1.3"/>
+<text x="680" y="232.5" font-size="13" fill="#1d1d1f" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">Iniciar sesión</text>
+<ellipse cx="390" cy="420" rx="112" ry="27" fill="#ffffff" stroke="#1d1d1f" stroke-width="1.3"/>
+<text x="390" y="424.5" font-size="13" fill="#1d1d1f" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">Registrar venta</text>
+<ellipse cx="390" cy="506" rx="112" ry="27" fill="#ffffff" stroke="#1d1d1f" stroke-width="1.3"/>
+<text x="390" y="503.0" font-size="13" fill="#1d1d1f" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">Registrar cliente</text>
+<text x="390" y="518.0" font-size="13" fill="#1d1d1f" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">en tienda</text>
+<ellipse cx="680" cy="420" rx="112" ry="27" fill="#ffffff" stroke="#1d1d1f" stroke-width="1.3"/>
+<text x="680" y="424.5" font-size="13" fill="#1d1d1f" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">Actualizar stock</text>
+<ellipse cx="950" cy="420" rx="112" ry="27" fill="#ffffff" stroke="#1d1d1f" stroke-width="1.3"/>
+<text x="950" y="424.5" font-size="13" fill="#1d1d1f" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">Anular venta</text>
+<ellipse cx="390" cy="640" rx="112" ry="27" fill="#ffffff" stroke="#1d1d1f" stroke-width="1.3"/>
+<text x="390" y="644.5" font-size="13" fill="#1d1d1f" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">Gestionar clientes</text>
+<ellipse cx="950" cy="610" rx="112" ry="27" fill="#ffffff" stroke="#1d1d1f" stroke-width="1.3"/>
+<text x="950" y="607.0" font-size="13" fill="#1d1d1f" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">Registrar lote</text>
+<text x="950" y="622.0" font-size="13" fill="#1d1d1f" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">de compra</text>
+<ellipse cx="950" cy="672" rx="112" ry="27" fill="#ffffff" stroke="#1d1d1f" stroke-width="1.3"/>
+<text x="950" y="676.5" font-size="13" fill="#1d1d1f" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">Gestionar piezas</text>
+<ellipse cx="950" cy="734" rx="112" ry="27" fill="#ffffff" stroke="#1d1d1f" stroke-width="1.3"/>
+<text x="950" y="738.5" font-size="13" fill="#1d1d1f" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">Gestionar categorías</text>
+<ellipse cx="950" cy="796" rx="112" ry="27" fill="#ffffff" stroke="#1d1d1f" stroke-width="1.3"/>
+<text x="950" y="800.5" font-size="13" fill="#1d1d1f" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">Gestionar proveedores</text>
+<ellipse cx="950" cy="858" rx="112" ry="27" fill="#ffffff" stroke="#1d1d1f" stroke-width="1.3"/>
+<text x="950" y="862.5" font-size="13" fill="#1d1d1f" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">Gestionar empleados</text>
+<ellipse cx="950" cy="950" rx="112" ry="27" fill="#ffffff" stroke="#1d1d1f" stroke-width="1.3"/>
+<text x="950" y="954.5" font-size="13" fill="#1d1d1f" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">Generar reportes</text>
+<ellipse cx="950" cy="1016" rx="112" ry="27" fill="#ffffff" stroke="#1d1d1f" stroke-width="1.3"/>
+<text x="950" y="1013.0" font-size="13" fill="#1d1d1f" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">Consultar consolidado</text>
+<text x="950" y="1028.0" font-size="13" fill="#1d1d1f" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">de sedes</text>
+<ellipse cx="680" cy="1060" rx="112" ry="27" fill="#ffffff" stroke="#1d1d1f" stroke-width="1.3"/>
+<text x="680" y="1057.0" font-size="13" fill="#1d1d1f" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">Publicar facturas</text>
+<text x="680" y="1072.0" font-size="13" fill="#1d1d1f" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">e inventario (API)</text>
+<line x1="464.8" y1="170.1" x2="605.2" y2="207.9" stroke="#5f6368" stroke-width="1.3" stroke-dasharray="6 4" marker-end="url(#abierta)"/>
+<text x="535.0" y="179.0" font-size="12" fill="#5f6368" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">«include»</text>
+<line x1="502.0" y1="420.0" x2="568.0" y2="420.0" stroke="#5f6368" stroke-width="1.3" stroke-dasharray="6 4" marker-end="url(#abierta)"/>
+<text x="535.0" y="412.0" font-size="12" fill="#5f6368" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">«include»</text>
+<line x1="838.0" y1="420.0" x2="792.0" y2="420.0" stroke="#5f6368" stroke-width="1.3" stroke-dasharray="6 4" marker-end="url(#abierta)"/>
+<text x="815.0" y="412.0" font-size="12" fill="#5f6368" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">«include»</text>
+<line x1="913.7" y1="584.5" x2="716.3" y2="445.5" stroke="#5f6368" stroke-width="1.3" stroke-dasharray="6 4" marker-end="url(#abierta)"/>
+<text x="855.0" y="515.0" font-size="12" fill="#5f6368" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">«include»</text>
+<line x1="390.0" y1="479.0" x2="390.0" y2="447.0" stroke="#5f6368" stroke-width="1.3" stroke-dasharray="6 4" marker-end="url(#abierta)"/>
+<text x="434.0" y="467.0" font-size="12" fill="#5f6368" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">«extend»</text>
+<circle cx="85" cy="180" r="11" fill="#ffffff" stroke="#1d1d1f" stroke-width="1.6"/>
+<line x1="85" y1="191" x2="85" y2="224" stroke="#1d1d1f" stroke-width="1.6"/>
+<line x1="67" y1="204" x2="103" y2="204" stroke="#1d1d1f" stroke-width="1.6"/>
+<line x1="85" y1="224" x2="71" y2="248" stroke="#1d1d1f" stroke-width="1.6"/>
+<line x1="85" y1="224" x2="99" y2="248" stroke="#1d1d1f" stroke-width="1.6"/>
+<text x="85" y="268" font-size="14" font-weight="bold" fill="#1d1d1f" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">Cliente</text>
+<circle cx="85" cy="510" r="11" fill="#ffffff" stroke="#1d1d1f" stroke-width="1.6"/>
+<line x1="85" y1="521" x2="85" y2="554" stroke="#1d1d1f" stroke-width="1.6"/>
+<line x1="67" y1="534" x2="103" y2="534" stroke="#1d1d1f" stroke-width="1.6"/>
+<line x1="85" y1="554" x2="71" y2="578" stroke="#1d1d1f" stroke-width="1.6"/>
+<line x1="85" y1="554" x2="99" y2="578" stroke="#1d1d1f" stroke-width="1.6"/>
+<text x="85" y="598" font-size="14" font-weight="bold" fill="#1d1d1f" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">Vendedor</text>
+<circle cx="1275" cy="710" r="11" fill="#ffffff" stroke="#1d1d1f" stroke-width="1.6"/>
+<line x1="1275" y1="721" x2="1275" y2="754" stroke="#1d1d1f" stroke-width="1.6"/>
+<line x1="1257" y1="734" x2="1293" y2="734" stroke="#1d1d1f" stroke-width="1.6"/>
+<line x1="1275" y1="754" x2="1261" y2="778" stroke="#1d1d1f" stroke-width="1.6"/>
+<line x1="1275" y1="754" x2="1289" y2="778" stroke="#1d1d1f" stroke-width="1.6"/>
+<text x="1275" y="798" font-size="14" font-weight="bold" fill="#1d1d1f" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">Administrador</text>
+<rect x="1229" y="1007" width="52" height="44" rx="4" fill="#ffffff" stroke="#1d1d1f" stroke-width="1.4"/>
+<text x="1255" y="1034" font-size="11" fill="#5f6368" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">«sistema»</text>
+<text x="1255" y="1071" font-size="14" font-weight="bold" fill="#1d1d1f" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">Sistema</text>
+<text x="1255" y="1088" font-size="14" font-weight="bold" fill="#1d1d1f" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">RepuAuto</text>
+</svg>

@@ -114,10 +114,13 @@ El formato completo, las reglas y lo que hace cada equipo están en
 
 ### Casos de uso
 
-Tres actores (vendedor, cliente y administrador) sobre catálogo e inventario, ventas, clientes y
-administración.
+Lo que hace hoy cada actor. El administrador puede hacer todo lo del vendedor, y el sistema de la
+otra sede (RepuAuto) consulta y alimenta el consolidado.
 
-<p align="center"><img src="docs/Diagramas/Casos_de_uso.png" alt="Diagrama de casos de uso" width="560"></p>
+<p align="center"><img src="docs/Diagramas/Casos_de_uso_actualizado.svg" alt="Diagrama de casos de uso actualizado" width="900"></p>
+
+Frente al [diagrama del diseño inicial](docs/Diagramas/Casos_de_uso.png) se agregaron: gestionar piezas,
+anular venta, gestionar clientes, generar reportes, el consolidado de sedes y la API para la otra sede.
 
 ### Diagrama de actividades
 
