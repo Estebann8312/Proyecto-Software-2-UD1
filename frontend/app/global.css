@@ -1625,6 +1625,51 @@ tr.anulada td {
   }
 }
 
+
+/* Gestión de categorías (diálogo de Inventario) */
+.fila-agregar {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.fila-agregar .control {
+  flex: 1 1 auto;
+}
+
+.lista-categorias {
+  max-height: 340px;
+  overflow-y: auto;
+  list-style: none;
+  border-top: 1px solid var(--linea-suave);
+}
+
+.lista-categorias li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 52px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--linea-suave);
+}
+
+.lista-categorias .sub {
+  display: block;
+}
+
+.acciones-fila {
+  display: flex;
+  flex: none;
+  gap: 14px;
+}
+
+.boton-texto:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+  text-decoration: none;
+}
+
 /* --------------------------------------------------------------------------
    Diálogos: lo que flota lleva sombra y el fondo se desenfoca
    -------------------------------------------------------------------------- */

@@ -1017,3 +1017,22 @@ class NgrokApagadoTests(IntegracionBase):
         with self.ngrok_responde("ERR_NGROK_999"):
             sede = self.admin_api.get("/api/consolidado/inventario/").data["sedes"][1]
         self.assertIn("ERR_NGROK_999", sede["error"])
+
+
+class GestionCategoriasTests(BaseAPITest):
+    """Lo que usa el diálogo Categorías de Inventario."""
+
+    def test_admin_renombra_y_no_repite_nombres(self):
+        url = f"/api/categorias/{self.categoria.pk}/"
+        self.assertEqual(self.admin_api.patch(url, {"nombre": "Procesadores"}, format="json").status_code, 200)
+        self.assertEqual(CategoriaPieza.objects.get(pk=self.categoria.pk).nombre, "Procesadores")
+        otra = self.admin_api.post("/api/categorias/", {"nombre": "Procesadores"}, format="json")
+        self.assertEqual(otra.status_code, 400)
+
+    def test_vendedor_no_renombra(self):
+        r = self.vend_api.patch(f"/api/categorias/{self.categoria.pk}/", {"nombre": "X"}, format="json")
+        self.assertEqual(r.status_code, 403)
+
+    def test_categoria_vacia_se_elimina(self):
+        vacia = CategoriaPieza.objects.create(nombre="Sin piezas")
+        self.assertEqual(self.admin_api.delete(f"/api/categorias/{vacia.pk}/").status_code, 204)

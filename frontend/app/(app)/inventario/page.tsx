@@ -31,7 +31,7 @@ export default function InventarioPage() {
   const [condicion, setCondicion] = useState("");
   const [estado, setEstado] = useState("");
   const [seleccionId, setSeleccionId] = useState<number | null>(null);
-  const [dialogo, setDialogo] = useState<null | "nueva" | "editar" | "lote">(null);
+  const [dialogo, setDialogo] = useState<null | "nueva" | "editar" | "lote" | "categorias">(null);
   const [mensaje, setMensaje] = useState("");
 
   const nombreCategoria = useMemo(() => {
@@ -101,9 +101,14 @@ export default function InventarioPage() {
         }
       >
         {esAdmin && (
-          <button type="button" className="boton" onClick={() => { setMensaje(""); setDialogo("nueva"); }}>
-            Nueva pieza
-          </button>
+          <>
+            <button type="button" className="boton secundario" onClick={() => { setMensaje(""); setDialogo("categorias"); }}>
+              Categorías
+            </button>
+            <button type="button" className="boton" onClick={() => { setMensaje(""); setDialogo("nueva"); }}>
+              Nueva pieza
+            </button>
+          </>
         )}
       </Encabezado>
 
@@ -252,6 +257,11 @@ export default function InventarioPage() {
             {seleccion && (
               <FormPieza pieza={seleccion} categorias={categorias.datos ?? []} alGuardar={(p) => guardado(`Cambios guardados en “${p.nombre}”.`)} />
             )}
+          </Dialogo>
+
+          <Dialogo abierto={dialogo === "categorias"} titulo="Categorías" alCerrar={() => setDialogo(null)}>
+            <GestionCategorias categorias={categorias.datos ?? []} piezas={piezas.datos ?? []}
+              alCambiar={(texto) => { setMensaje(texto); categorias.recargar(); }} />
           </Dialogo>
 
           <Dialogo abierto={dialogo === "lote"} titulo="Registrar entrada de proveedor" alCerrar={() => setDialogo(null)}>
@@ -413,5 +423,122 @@ function FormLote({
         </button>
       </div>
     </form>
+  );
+}
+
+/** Crear, renombrar y eliminar categorías (solo administrador). */
+function GestionCategorias({
+  categorias,
+  piezas,
+  alCambiar,
+}: {
+  categorias: Categoria[];
+  piezas: Pieza[];
+  alCambiar: (texto: string) => void;
+}) {
+  const [nueva, setNueva] = useState("");
+  const [editandoId, setEditandoId] = useState<number | null>(null);
+  const [nombreEditado, setNombreEditado] = useState("");
+  const [error, setError] = useState("");
+  const [enviando, setEnviando] = useState(false);
+
+  const piezasPorCategoria = useMemo(() => {
+    const conteo = new Map<number, number>();
+    for (const p of piezas) conteo.set(p.id_categoria, (conteo.get(p.id_categoria) ?? 0) + 1);
+    return conteo;
+  }, [piezas]);
+
+  async function ejecutar(accion: () => Promise<unknown>, texto: string) {
+    setError("");
+    setEnviando(true);
+    try {
+      await accion();
+      alCambiar(texto);
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo guardar.");
+      return false;
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  async function crear(e: FormEvent) {
+    e.preventDefault();
+    const nombre = nueva.trim();
+    if (!nombre) return;
+    if (await ejecutar(() => enviar("/categorias/", "POST", { nombre }), `Categoría “${nombre}” creada.`)) {
+      setNueva("");
+    }
+  }
+
+  async function renombrar(c: Categoria) {
+    const nombre = nombreEditado.trim();
+    if (!nombre || nombre === c.nombre) {
+      setEditandoId(null);
+      return;
+    }
+    if (await ejecutar(() => enviar(`/categorias/${c.id_categoria}/`, "PATCH", { nombre }),
+      `“${c.nombre}” ahora se llama “${nombre}”.`)) {
+      setEditandoId(null);
+    }
+  }
+
+  async function eliminar(c: Categoria) {
+    await ejecutar(() => enviar(`/categorias/${c.id_categoria}/`, "DELETE"), `Categoría “${c.nombre}” eliminada.`);
+  }
+
+  return (
+    <div className="formulario">
+      <form className="fila-agregar" onSubmit={crear}>
+        <label className="visualmente-oculto" htmlFor="cat-nueva">Nueva categoría</label>
+        <input id="cat-nueva" className="control" placeholder="Nueva categoría, p. ej. Refrigeración" maxLength={80}
+          value={nueva} onChange={(e) => setNueva(e.target.value)} />
+        <button type="submit" className="boton" disabled={enviando || !nueva.trim()}>Agregar</button>
+      </form>
+
+      <Aviso texto={error} />
+
+      <ul className="lista-categorias">
+        {categorias.map((c) => {
+          const cantidad = piezasPorCategoria.get(c.id_categoria) ?? 0;
+          const editando = editandoId === c.id_categoria;
+          return (
+            <li key={c.id_categoria}>
+              {editando ? (
+                <form className="fila-agregar" onSubmit={(e) => { e.preventDefault(); renombrar(c); }}>
+                  <label className="visualmente-oculto" htmlFor={`cat-${c.id_categoria}`}>Nuevo nombre</label>
+                  <input id={`cat-${c.id_categoria}`} className="control" maxLength={80} autoFocus
+                    value={nombreEditado} onChange={(e) => setNombreEditado(e.target.value)} />
+                  <button type="submit" className="boton" disabled={enviando}>Guardar</button>
+                  <button type="button" className="boton secundario" onClick={() => setEditandoId(null)}>Cancelar</button>
+                </form>
+              ) : (
+                <>
+                  <span>
+                    <span className="principal-celda">{c.nombre}</span>
+                    <span className="sub secundario pequeno">
+                      {cantidad === 0 ? "Sin piezas" : cantidad === 1 ? "1 pieza" : `${cantidad} piezas`}
+                    </span>
+                  </span>
+                  <span className="acciones-fila">
+                    <button type="button" className="boton-texto" disabled={enviando}
+                      onClick={() => { setError(""); setEditandoId(c.id_categoria); setNombreEditado(c.nombre); }}>
+                      Renombrar
+                    </button>
+                    <button type="button" className="boton-texto peligro" disabled={enviando || cantidad > 0}
+                      title={cantidad > 0 ? "Tiene piezas: primero cámbialas de categoría" : undefined}
+                      onClick={() => eliminar(c)}>
+                      Eliminar
+                    </button>
+                  </span>
+                </>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      <p className="ayuda pequeno secundario">Solo se puede eliminar una categoría sin piezas.</p>
+    </div>
   );
 }
