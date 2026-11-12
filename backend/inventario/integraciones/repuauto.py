@@ -45,16 +45,33 @@ def _mensaje_de_error(respuesta):
 CABECERAS_BASE = {"ngrok-skip-browser-warning": "1", "Accept": "application/json"}
 
 
+# Errores que responde ngrok mismo (no RepuAuto), con el encabezado Ngrok-Error-Code.
+ERRORES_NGROK = {
+    # El dominio existe, pero nadie tiene el túnel abierto.
+    "ERR_NGROK_3200": "El túnel de ngrok de RepuAuto está apagado: deben correr flask run y ngrok.",
+    # El túnel está abierto, pero no hay nada escuchando en su puerto 5000.
+    "ERR_NGROK_8012": "El túnel de ngrok de RepuAuto está abierto, pero su app no: deben correr flask run.",
+}
+
+
 def _pedir(metodo, ruta, headers=None, **kwargs):
     cabeceras = {**CABECERAS_BASE, **(headers or {})}
     try:
-        return requests.request(
+        respuesta = requests.request(
             metodo, _url(ruta), timeout=config()["TIMEOUT"], headers=cabeceras, **kwargs
         )
     except requests.Timeout:
         raise AliadoNoDisponible("RepuAuto tardó demasiado en responder.")
     except requests.RequestException:
         raise AliadoNoDisponible("No se pudo conectar con RepuAuto. Revisa que su API esté en línea.")
+    # Si quien responde es ngrok y no RepuAuto, el 404 o 502 no significa que la ruta no
+    # exista: el túnel está apagado o no llega a su app.
+    codigo_ngrok = respuesta.headers.get("Ngrok-Error-Code")
+    if codigo_ngrok:
+        raise AliadoNoDisponible(
+            ERRORES_NGROK.get(codigo_ngrok, f"ngrok no pudo llegar a RepuAuto ({codigo_ngrok}).")
+        )
+    return respuesta
 
 
 def _token(renovar=False):

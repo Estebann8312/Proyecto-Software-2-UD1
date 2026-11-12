@@ -759,8 +759,8 @@ REPUAUTO_PRUEBA = {"URL": "http://repuauto.test/api", "CORREO": "integracion@rep
                    "CLAVE": "clave", "TIMEOUT": 2}
 
 
-def respuesta_falsa(codigo, datos):
-    r = mock.Mock(status_code=codigo)
+def respuesta_falsa(codigo, datos, cabeceras=None):
+    r = mock.Mock(status_code=codigo, headers=cabeceras or {})
     r.json.return_value = datos
     return r
 
@@ -986,3 +986,34 @@ class ConsolidadoInventarioTests(IntegracionBase):
         d = self.admin_api.get(self.URL).data
         self.assertEqual(d["sedes"][1]["estado"], "sin_configurar")
         self.assertEqual(d["total"]["productos"], 1)
+
+
+class NgrokApagadoTests(IntegracionBase):
+    """Si quien responde es ngrok (túnel apagado), el aviso no debe decir que falta la ruta."""
+
+    def ngrok_responde(self, codigo_ngrok, estado_http=404):
+        def responder(metodo, url, **kwargs):
+            return respuesta_falsa(estado_http, None, {"Ngrok-Error-Code": codigo_ngrok})
+        return mock.patch("inventario.integraciones.repuauto.requests.request", side_effect=responder)
+
+    @override_settings(REPUAUTO=REPUAUTO_PRUEBA)
+    def test_tunel_apagado_en_inventario_y_facturas(self):
+        with self.ngrok_responde("ERR_NGROK_3200"):
+            inventario = self.admin_api.get("/api/consolidado/inventario/").data["sedes"][1]
+            facturas = self.admin_api.get(ConsolidadoTests.URL).data["sedes"][1]
+        for sede in (inventario, facturas):
+            self.assertEqual(sede["estado"], "error")
+            self.assertIn("túnel de ngrok de RepuAuto está apagado", sede["error"])
+            self.assertNotIn("no publica", sede["error"])
+
+    @override_settings(REPUAUTO=REPUAUTO_PRUEBA)
+    def test_tunel_abierto_sin_app(self):
+        with self.ngrok_responde("ERR_NGROK_8012", estado_http=502):
+            sede = self.admin_api.get("/api/consolidado/inventario/").data["sedes"][1]
+        self.assertIn("deben correr flask run", sede["error"])
+
+    @override_settings(REPUAUTO=REPUAUTO_PRUEBA)
+    def test_otro_error_de_ngrok(self):
+        with self.ngrok_responde("ERR_NGROK_999"):
+            sede = self.admin_api.get("/api/consolidado/inventario/").data["sedes"][1]
+        self.assertIn("ERR_NGROK_999", sede["error"])
