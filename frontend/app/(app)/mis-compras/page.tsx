@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 
+import { Paginador, usePaginacion } from "../../../components/Paginador";
 import { Encabezado, EstadoCarga } from "../../../components/ui";
 import type { Venta } from "../../../lib/api";
 import { fechaConHora, NOMBRE_PAGO, precio } from "../../../lib/formato";
@@ -11,6 +12,7 @@ import { useDatos } from "../../../lib/useDatos";
 export default function MisComprasPage() {
   const usuario = useRequiereSesion(["cliente"]);
   const compras = useDatos<Venta[]>(usuario ? "/mis-compras/" : null);
+  const paginas = usePaginacion(compras.datos ?? [], 5);
 
   if (!usuario) return null;
 
@@ -41,7 +43,7 @@ export default function MisComprasPage() {
       )}
 
       <div className="compras">
-        {compras.datos?.map((c) => (
+        {paginas.visibles.map((c) => (
           <article key={c.id_venta} className={`panel compra${c.estado === "anulada" ? " anulada" : ""}`}>
             <header>
               <h2 className="cifras">Compra N.º {c.id_venta}</h2>
@@ -70,6 +72,9 @@ export default function MisComprasPage() {
             </footer>
           </article>
         ))}
+      </div>
+      <div style={{ maxWidth: 760 }}>
+        <Paginador p={paginas} nombre="compras" tamanos={[5, 10, 20]} />
       </div>
     </>
   );

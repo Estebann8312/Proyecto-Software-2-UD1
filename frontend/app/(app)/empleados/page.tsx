@@ -1,11 +1,12 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
 
 import Eliminar from "../../../components/Eliminar";
+import { Paginador, usePaginacion } from "../../../components/Paginador";
 import { Aviso, Campo, Dialogo, Encabezado, EstadoCarga } from "../../../components/ui";
 import { enviar, type Empleado } from "../../../lib/api";
-import { fecha } from "../../../lib/formato";
+import { fecha, normalizar } from "../../../lib/formato";
 import { NOMBRE_ROL, useRequiereSesion } from "../../../lib/session";
 import { useDatos } from "../../../lib/useDatos";
 
@@ -16,6 +17,19 @@ export default function EmpleadosPage() {
   const [editando, setEditando] = useState<Empleado | "nuevo" | null>(null);
   const [eliminando, setEliminando] = useState<Empleado | null>(null);
   const [mensaje, setMensaje] = useState("");
+  const [busqueda, setBusqueda] = useState("");
+  const [rol, setRol] = useState("");
+
+  const filtrados = useMemo(() => {
+    const palabras = normalizar(busqueda.trim()).split(/\s+/).filter(Boolean);
+    return (empleados.datos ?? []).filter((e) => {
+      if (rol && e.rol !== rol) return false;
+      const texto = normalizar(`${e.nombres} ${e.apellidos} ${e.username} ${e.email} ${e.telefono ?? ""}`);
+      return palabras.every((w) => texto.includes(w));
+    });
+  }, [empleados.datos, busqueda, rol]);
+
+  const paginas = usePaginacion(filtrados, 10, `${busqueda}|${rol}`);
 
   if (!usuario) return null;
 
@@ -27,9 +41,23 @@ export default function EmpleadosPage() {
 
       <Aviso texto={mensaje} tipo="exito" />
 
-      <div className="tabla-contenedor" style={{ marginTop: mensaje ? 14 : 0 }}>
-        <EstadoCarga cargando={empleados.cargando} error={empleados.error} vacio={empleados.datos?.length === 0} />
-        {!!empleados.datos?.length && (
+      <div className="filtros" style={{ marginTop: mensaje ? 14 : 0 }}>
+        <label className="visualmente-oculto" htmlFor="buscar">Buscar empleado</label>
+        <input id="buscar" className="control buscar" type="search" placeholder="Buscar por nombre, usuario, correo o teléfono"
+          value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
+        <label className="visualmente-oculto" htmlFor="f-rol">Rol</label>
+        <select id="f-rol" className="control" value={rol} onChange={(e) => setRol(e.target.value)}>
+          <option value="">Todos los roles</option>
+          <option value="administrador">{NOMBRE_ROL.administrador}</option>
+          <option value="vendedor">{NOMBRE_ROL.vendedor}</option>
+        </select>
+      </div>
+
+      <div className="tabla-contenedor">
+        <EstadoCarga cargando={empleados.cargando} error={empleados.error}
+          vacio={!!empleados.datos && filtrados.length === 0}
+          textoVacio={empleados.datos?.length ? "Ningún empleado coincide con la búsqueda." : "No hay registros todavía."} />
+        {filtrados.length > 0 && (
           <table>
             <thead>
               <tr>
@@ -41,7 +69,7 @@ export default function EmpleadosPage() {
               </tr>
             </thead>
             <tbody>
-              {empleados.datos.map((e) => {
+              {paginas.visibles.map((e) => {
                 const soyYo = e.id_usuario === usuario.id_usuario;
                 return (
                   <tr key={e.id_usuario}>
@@ -71,6 +99,7 @@ export default function EmpleadosPage() {
           </table>
         )}
       </div>
+      <Paginador p={paginas} nombre="empleados" />
 
       <p className="secundario pequeno" style={{ marginTop: 14, maxWidth: "70ch" }}>
         El vendedor registra ventas y clientes y consulta el inventario. El administrador además gestiona piezas,

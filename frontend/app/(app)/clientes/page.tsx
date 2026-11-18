@@ -3,6 +3,7 @@
 import { FormEvent, Fragment, useMemo, useState } from "react";
 
 import Eliminar from "../../../components/Eliminar";
+import { Paginador, usePaginacion } from "../../../components/Paginador";
 import { Aviso, Campo, Dialogo, Encabezado, EstadoCarga } from "../../../components/ui";
 import { enviar, type Cliente, type Venta } from "../../../lib/api";
 import { fecha, fechaConHora, normalizar, NOMBRE_PAGO, precio } from "../../../lib/formato";
@@ -15,6 +16,8 @@ export default function ClientesPage() {
   const ventas = useDatos<Venta[]>(usuario ? "/ventas/" : null);
 
   const [busqueda, setBusqueda] = useState("");
+  const [registro, setRegistro] = useState("");
+  const [conCompras, setConCompras] = useState("");
   const [editando, setEditando] = useState<Cliente | "nuevo" | null>(null);
   const [eliminando, setEliminando] = useState<Cliente | null>(null);
   const [mensaje, setMensaje] = useState("");
@@ -30,11 +33,22 @@ export default function ClientesPage() {
   }, [ventas.datos]);
 
   const filtrados = useMemo(() => {
-    const q = normalizar(busqueda.trim());
+    const palabras = normalizar(busqueda.trim()).split(/\s+/).filter(Boolean);
     return (clientes.datos ?? [])
-      .filter((c) => !q || normalizar(`${c.nombres} ${c.apellidos} ${c.documento ?? ""} ${c.email ?? ""} ${c.telefono ?? ""}`).includes(q))
+      .filter((c) => {
+        const texto = normalizar(`${c.nombres} ${c.apellidos} ${c.documento ?? ""} ${c.email ?? ""} ${c.telefono ?? ""}`);
+        return palabras.every((w) => texto.includes(w));
+      })
+      .filter((c) => !registro || (registro === "cuenta" ? !!c.user : !c.user))
+      .filter((c) => {
+        if (!conCompras) return true;
+        const tiene = (comprasPorCliente.get(c.id_cliente) ?? []).some((v) => v.estado === "activa");
+        return conCompras === "si" ? tiene : !tiene;
+      })
       .sort((a, b) => `${a.nombres} ${a.apellidos}`.localeCompare(`${b.nombres} ${b.apellidos}`, "es"));
-  }, [clientes.datos, busqueda]);
+  }, [clientes.datos, busqueda, registro, conCompras, comprasPorCliente]);
+
+  const paginas = usePaginacion(filtrados, 10, `${busqueda}|${registro}|${conCompras}`);
 
   if (!usuario) return null;
 
@@ -53,6 +67,18 @@ export default function ClientesPage() {
         <label className="visualmente-oculto" htmlFor="buscar">Buscar cliente</label>
         <input id="buscar" className="control buscar" type="search" placeholder="Buscar por nombre, documento, correo o teléfono"
           value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
+        <label className="visualmente-oculto" htmlFor="f-registro">Tipo de registro</label>
+        <select id="f-registro" className="control" value={registro} onChange={(e) => setRegistro(e.target.value)}>
+          <option value="">Con y sin cuenta</option>
+          <option value="cuenta">Con cuenta en línea</option>
+          <option value="tienda">Registrados en tienda</option>
+        </select>
+        <label className="visualmente-oculto" htmlFor="f-compras">Compras</label>
+        <select id="f-compras" className="control" value={conCompras} onChange={(e) => setConCompras(e.target.value)}>
+          <option value="">Con y sin compras</option>
+          <option value="si">Con compras</option>
+          <option value="no">Sin compras</option>
+        </select>
       </div>
 
       <div className="tabla-contenedor">
@@ -70,7 +96,7 @@ export default function ClientesPage() {
               </tr>
             </thead>
             <tbody>
-              {filtrados.map((c) => {
+              {paginas.visibles.map((c) => {
                 const compras = comprasPorCliente.get(c.id_cliente) ?? [];
                 const activas = compras.filter((v) => v.estado === "activa");
                 const total = activas.reduce((t, v) => t + Number(v.total), 0);
@@ -142,6 +168,7 @@ export default function ClientesPage() {
           </table>
         )}
       </div>
+      <Paginador p={paginas} nombre="clientes" />
 
       <Dialogo abierto={!!editando} titulo={editando === "nuevo" ? "Nuevo cliente" : "Editar cliente"} alCerrar={() => setEditando(null)}>
         {editando && (

@@ -2,6 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react";
 
+import { Paginador, usePaginacion } from "../../../components/Paginador";
 import { Encabezado, EstadoCarga } from "../../../components/ui";
 import type {
   Consolidado,
@@ -86,6 +87,8 @@ function FacturasSedes() {
       .slice()
       .reverse(); // la más reciente primero
   }, [c, tipo, sede, busqueda]);
+
+  const paginasFacturas = usePaginacion(facturas, 10, `${rango.desde}|${rango.hasta}|${tipo}|${sede}|${busqueda}`);
 
   const totalVentas = Number(c?.total.venta.total ?? 0);
   const aliadaCaida = c?.sedes.some((s) => !s.propia && s.estado !== "ok");
@@ -240,6 +243,8 @@ function FacturasSedes() {
                   <thead>
                     <tr>
                       <th>Factura</th>
+                      <th>Sede</th>
+                      <th>Tipo</th>
                       <th>Tercero</th>
                       <th className="num">Subtotal</th>
                       <th className="num">IVA</th>
@@ -247,14 +252,18 @@ function FacturasSedes() {
                     </tr>
                   </thead>
                   <tbody>
-                    {facturas.map((f: FacturaSede) => (
-                      <tr key={`${f.sucursal}-${f.numero}`}>
+                    {paginasFacturas.visibles.map((f: FacturaSede) => (
+                      <tr key={`${f.sucursal}-${f.tipo}-${f.numero}`}>
                         <td>
                           <span className="principal-celda cifras">{f.numero}</span>
-                          <span className="sub">
-                            {f.sucursal} · {NOMBRE_TIPO[f.tipo]} · {fechaConHora(f.fecha)}
+                          <span className="sub">{fechaConHora(f.fecha)}</span>
+                        </td>
+                        <td>
+                          <span className={`etiqueta sede-${c.sedes.find((s) => s.sucursal === f.sucursal)?.propia ? "propia" : "aliada"}`}>
+                            {f.sucursal}
                           </span>
                         </td>
+                        <td>{NOMBRE_TIPO[f.tipo]}</td>
                         <td>
                           {f.tercero.nombre}
                           <span className="sub cifras">
@@ -272,6 +281,7 @@ function FacturasSedes() {
                 </table>
               )}
             </div>
+            <Paginador p={paginasFacturas} nombre="facturas" />
           </section>
 
           <p className="nota-metodo secundario pequeno">
@@ -329,6 +339,8 @@ function InventarioSedes() {
       return palabras.every((w) => texto.includes(w));
     });
   }, [c, sede, estado, busqueda]);
+
+  const paginasProductos = usePaginacion(productos, 10, `${sede}|${estado}|${busqueda}`);
 
   const aliadaCaida = c?.sedes.some((s) => !s.propia && s.estado !== "ok");
 
@@ -468,7 +480,7 @@ function InventarioSedes() {
                     </tr>
                   </thead>
                   <tbody>
-                    {productos.map((p) => (
+                    {paginasProductos.visibles.map((p) => (
                       <tr key={`${p.sucursal}-${p.codigo}`}>
                         <td>
                           <span className="principal-celda">{p.nombre}</span>
@@ -476,7 +488,11 @@ function InventarioSedes() {
                             <span className="cifras">{p.codigo}</span> · {p.categoria} · {p.marca}
                           </span>
                         </td>
-                        <td>{p.sucursal}</td>
+                        <td>
+                          <span className={`etiqueta sede-${c.sedes.find((s) => s.sucursal === p.sucursal)?.propia ? "propia" : "aliada"}`}>
+                            {p.sucursal}
+                          </span>
+                        </td>
                         <td className="num">{precio(p.precio_venta)}</td>
                         <td className="num">
                           <span className={`etiqueta ${ESTADO_PRODUCTO[p.estado].clase} cifras`}
@@ -491,6 +507,7 @@ function InventarioSedes() {
                 </table>
               )}
             </div>
+            <Paginador p={paginasProductos} nombre="productos" />
           </section>
 
           <p className="nota-metodo secundario pequeno">

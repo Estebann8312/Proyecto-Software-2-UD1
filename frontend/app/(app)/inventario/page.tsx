@@ -2,6 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react";
 
+import { Paginador, usePaginacion } from "../../../components/Paginador";
 import { Aviso, Campo, Dialogo, Encabezado, EstadoCarga } from "../../../components/ui";
 import { enviar, type Categoria, type Condicion, type Pieza, type Proveedor, type Venta } from "../../../lib/api";
 import { estadoStock, fecha, marcaDeTiempo, normalizar, NOMBRE_CONDICION, precio } from "../../../lib/formato";
@@ -30,6 +31,7 @@ export default function InventarioPage() {
   const [categoria, setCategoria] = useState("");
   const [condicion, setCondicion] = useState("");
   const [estado, setEstado] = useState("");
+  const [orden, setOrden] = useState("nombre");
   const [seleccionId, setSeleccionId] = useState<number | null>(null);
   const [dialogo, setDialogo] = useState<null | "nueva" | "editar" | "lote" | "categorias">(null);
   const [mensaje, setMensaje] = useState("");
@@ -45,15 +47,26 @@ export default function InventarioPage() {
   }, [proveedores.datos]);
 
   const filtradas = useMemo(() => {
-    const q = normalizar(busqueda.trim());
-    return (piezas.datos ?? []).filter((p) => {
-      if (q && !normalizar(`${p.nombre} ${p.marca ?? ""} ${p.descripcion ?? ""}`).includes(q)) return false;
+    const palabras = normalizar(busqueda.trim()).split(/\s+/).filter(Boolean);
+    const lista = (piezas.datos ?? []).filter((p) => {
+      const texto = normalizar(`${p.nombre} ${p.marca ?? ""} ${p.descripcion ?? ""} ${nombreCategoria(p.id_categoria)}`);
+      if (!palabras.every((w) => texto.includes(w))) return false;
       if (categoria && String(p.id_categoria) !== categoria) return false;
       if (condicion && p.condicion !== condicion) return false;
       if (estado && estadoStock(p.stock_actual).clase !== estado) return false;
       return true;
     });
-  }, [piezas.datos, busqueda, categoria, condicion, estado]);
+    const comparar: Record<string, (a: Pieza, b: Pieza) => number> = {
+      nombre: (a, b) => a.nombre.localeCompare(b.nombre, "es"),
+      "precio-asc": (a, b) => Number(a.precio_venta) - Number(b.precio_venta),
+      "precio-desc": (a, b) => Number(b.precio_venta) - Number(a.precio_venta),
+      "stock-asc": (a, b) => a.stock_actual - b.stock_actual,
+      "stock-desc": (a, b) => b.stock_actual - a.stock_actual,
+    };
+    return lista.sort(comparar[orden]);
+  }, [piezas.datos, busqueda, categoria, condicion, estado, orden, nombreCategoria]);
+
+  const paginas = usePaginacion(filtradas, 10, [busqueda, categoria, condicion, estado, orden].join("|"));
 
   const seleccion = piezas.datos?.find((p) => p.id_pieza === seleccionId) ?? null;
 
@@ -116,7 +129,7 @@ export default function InventarioPage() {
 
       <div className="filtros" style={{ marginTop: mensaje ? 14 : 0 }}>
         <label className="visualmente-oculto" htmlFor="buscar">Buscar pieza</label>
-        <input id="buscar" className="control buscar" type="search" placeholder="Buscar por nombre o descripción"
+        <input id="buscar" className="control buscar" type="search" placeholder="Buscar por nombre, marca, categoría o descripción"
           value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
 
         <label className="visualmente-oculto" htmlFor="f-categoria">Categoría</label>
@@ -141,6 +154,15 @@ export default function InventarioPage() {
           <option value="alerta">Stock bajo</option>
           <option value="peligro">Agotadas</option>
         </select>
+
+        <label className="visualmente-oculto" htmlFor="f-orden">Ordenar</label>
+        <select id="f-orden" className="control" value={orden} onChange={(e) => setOrden(e.target.value)}>
+          <option value="nombre">Nombre (A-Z)</option>
+          <option value="precio-asc">Precio: menor a mayor</option>
+          <option value="precio-desc">Precio: mayor a menor</option>
+          <option value="stock-asc">Menos stock primero</option>
+          <option value="stock-desc">Más stock primero</option>
+        </select>
       </div>
 
       <div className="inventario">
@@ -158,7 +180,7 @@ export default function InventarioPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtradas.map((p) => {
+                {paginas.visibles.map((p) => {
                   const e = estadoStock(p.stock_actual);
                   const activa = p.id_pieza === seleccionId;
                   return (
@@ -185,6 +207,7 @@ export default function InventarioPage() {
               </tbody>
             </table>
           )}
+          <Paginador p={paginas} nombre="piezas" />
         </div>
 
         <aside className="panel detalle-pieza" aria-live="polite">

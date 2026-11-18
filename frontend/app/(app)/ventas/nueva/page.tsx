@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { FormEvent, useMemo, useState } from "react";
 
+import BuscadorCliente from "../../../../components/BuscadorCliente";
+import { Paginador, usePaginacion } from "../../../../components/Paginador";
 import { Aviso, Campo, Dialogo, Encabezado, EstadoCarga } from "../../../../components/ui";
 import { enviar, type Categoria, type Cliente, type MetodoPago, type Pieza, type Venta } from "../../../../lib/api";
 import { estadoStock, normalizar, NOMBRE_CONDICION, NOMBRE_PAGO, precio } from "../../../../lib/formato";
@@ -20,12 +22,14 @@ export default function NuevaVentaPage() {
 
   const [busqueda, setBusqueda] = useState("");
   const [lineas, setLineas] = useState<Linea[]>([]);
+  const [categoria, setCategoria] = useState("");
+  const [soloDisponibles, setSoloDisponibles] = useState(true);
   const [clienteId, setClienteId] = useState("");
   const [metodo, setMetodo] = useState<MetodoPago>("efectivo");
   const [error, setError] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [registrada, setRegistrada] = useState<Venta | null>(null);
-  const [nuevoCliente, setNuevoCliente] = useState(false);
+  const [nuevoCliente, setNuevoCliente] = useState<string | null>(null);
 
   const nombreCategoria = useMemo(() => {
     const mapa = new Map((categorias.datos ?? []).map((c) => [c.id_categoria, c.nombre]));
@@ -33,11 +37,19 @@ export default function NuevaVentaPage() {
   }, [categorias.datos]);
 
   const resultados = useMemo(() => {
-    const q = normalizar(busqueda.trim());
+    const palabras = normalizar(busqueda.trim()).split(/\s+/).filter(Boolean);
     return (piezas.datos ?? [])
-      .filter((p) => !q || normalizar(`${p.nombre} ${nombreCategoria(p.id_categoria)}`).includes(q))
+      .filter((p) => !categoria || String(p.id_categoria) === categoria)
+      .filter((p) => !soloDisponibles || p.stock_actual > 0)
+      .filter((p) => {
+        const texto = normalizar(`${p.nombre} ${p.marca ?? ""} ${nombreCategoria(p.id_categoria)}`);
+        return palabras.every((w) => texto.includes(w));
+      })
       .sort((a, b) => Number(b.stock_actual > 0) - Number(a.stock_actual > 0));
-  }, [piezas.datos, busqueda, nombreCategoria]);
+  }, [piezas.datos, busqueda, categoria, soloDisponibles, nombreCategoria]);
+
+  const paginas = usePaginacion(resultados, 8, `${busqueda}|${categoria}|${soloDisponibles}`);
+  const cliente = clientes.datos?.find((c) => String(c.id_cliente) === clienteId) ?? null;
 
   const total = lineas.reduce((t, l) => t + Number(l.pieza.precio_venta) * l.cantidad, 0);
   const unidades = lineas.reduce((t, l) => t + l.cantidad, 0);
@@ -121,12 +133,21 @@ export default function NuevaVentaPage() {
             <label className="visualmente-oculto" htmlFor="buscar">Buscar pieza</label>
             <input id="buscar" className="control buscar" type="search" autoFocus
               placeholder="Buscar pieza: Ryzen, RTX 4060, SSD…" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
+            <label className="visualmente-oculto" htmlFor="f-categoria">Categoría</label>
+            <select id="f-categoria" className="control" value={categoria} onChange={(e) => setCategoria(e.target.value)}>
+              <option value="">Todas las categorías</option>
+              {categorias.datos?.map((c) => <option key={c.id_categoria} value={c.id_categoria}>{c.nombre}</option>)}
+            </select>
+            <label className="interruptor pequeno">
+              <input type="checkbox" checked={soloDisponibles} onChange={(e) => setSoloDisponibles(e.target.checked)} />
+              Solo con stock
+            </label>
           </div>
           <div className="panel">
             <EstadoCarga cargando={piezas.cargando} error={piezas.error}
               vacio={!!piezas.datos && resultados.length === 0} textoVacio="Ninguna pieza coincide con la búsqueda." />
             <ul className="lista-simple catalogo-venta">
-              {resultados.map((p) => {
+              {paginas.visibles.map((p) => {
                 const enVenta = lineas.find((l) => l.pieza.id_pieza === p.id_pieza)?.cantidad ?? 0;
                 const quedan = p.stock_actual - enVenta;
                 const e = estadoStock(p.stock_actual);
@@ -150,6 +171,7 @@ export default function NuevaVentaPage() {
                 );
               })}
             </ul>
+            <Paginador p={paginas} nombre="piezas" tamanos={[8, 16, 32]} />
           </div>
         </section>
 
@@ -184,21 +206,19 @@ export default function NuevaVentaPage() {
 
           <div className="bloque">
             <Campo id="cliente" etiqueta="Cliente">
-              <select id="cliente" className="control" required value={clienteId} onChange={(e) => setClienteId(e.target.value)}>
-                <option value="" disabled>Elige un cliente</option>
-                {[...(clientes.datos ?? [])]
-                  .sort((a, b) => `${a.nombres} ${a.apellidos}`.localeCompare(`${b.nombres} ${b.apellidos}`, "es"))
-                  .map((c) => (
-                    <option key={c.id_cliente} value={c.id_cliente}>
-                      {c.nombres} {c.apellidos}{c.documento ? ` · ${c.documento}` : ""}
-                    </option>
-                  ))}
-              </select>
+              <BuscadorCliente
+                clientes={clientes.datos ?? []}
+                seleccionado={cliente}
+                alElegir={(c) => setClienteId(c ? String(c.id_cliente) : "")}
+                alCrear={(texto) => setNuevoCliente(texto)}
+              />
             </Campo>
-            <p className="pequeno" style={{ marginTop: 8 }}>
-              ¿No está en la lista?{" "}
-              <button type="button" className="boton-texto" onClick={() => setNuevoCliente(true)}>Registrar cliente</button>
-            </p>
+            {!cliente && (
+              <p className="pequeno" style={{ marginTop: 8 }}>
+                ¿Es nuevo?{" "}
+                <button type="button" className="boton-texto" onClick={() => setNuevoCliente("")}>Registrar cliente</button>
+              </p>
+            )}
           </div>
 
           <div className="bloque">
@@ -229,10 +249,11 @@ export default function NuevaVentaPage() {
         </form>
       </div>
 
-      <Dialogo abierto={nuevoCliente} titulo="Registrar cliente" alCerrar={() => setNuevoCliente(false)}>
+      <Dialogo abierto={nuevoCliente !== null} titulo="Registrar cliente" alCerrar={() => setNuevoCliente(null)}>
         <FormClienteRapido
+          texto={nuevoCliente ?? ""}
           alGuardar={(c) => {
-            setNuevoCliente(false);
+            setNuevoCliente(null);
             clientes.recargar();
             setClienteId(String(c.id_cliente));
           }}
@@ -242,8 +263,16 @@ export default function NuevaVentaPage() {
   );
 }
 
-function FormClienteRapido({ alGuardar }: { alGuardar: (c: Cliente) => void }) {
-  const [form, setForm] = useState({ nombres: "", apellidos: "", documento: "", telefono: "", email: "" });
+/** Lo escrito en el buscador se aprovecha: dígitos → documento; palabras → nombres y apellidos. */
+function datosIniciales(texto: string) {
+  const limpio = texto.trim();
+  if (/^\d[\d\s.-]*$/.test(limpio)) return { nombres: "", apellidos: "", documento: limpio.replace(/\D/g, "") };
+  const [nombres = "", ...resto] = limpio.split(/\s+/);
+  return { nombres, apellidos: resto.join(" "), documento: "" };
+}
+
+function FormClienteRapido({ texto, alGuardar }: { texto: string; alGuardar: (c: Cliente) => void }) {
+  const [form, setForm] = useState({ ...datosIniciales(texto), telefono: "", email: "" });
   const [error, setError] = useState("");
   const [enviando, setEnviando] = useState(false);
 

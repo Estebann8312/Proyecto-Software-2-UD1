@@ -1,10 +1,12 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
 
 import Eliminar from "../../../components/Eliminar";
+import { Paginador, usePaginacion } from "../../../components/Paginador";
 import { Aviso, Campo, Dialogo, Encabezado, EstadoCarga } from "../../../components/ui";
 import { enviar, type Proveedor } from "../../../lib/api";
+import { normalizar } from "../../../lib/formato";
 import { useRequiereSesion } from "../../../lib/session";
 import { useDatos } from "../../../lib/useDatos";
 
@@ -16,6 +18,19 @@ export default function ProveedoresPage() {
   const [editando, setEditando] = useState<Proveedor | "nuevo" | null>(null);
   const [eliminando, setEliminando] = useState<Proveedor | null>(null);
   const [mensaje, setMensaje] = useState("");
+  const [busqueda, setBusqueda] = useState("");
+
+  const filtrados = useMemo(() => {
+    const palabras = normalizar(busqueda.trim()).split(/\s+/).filter(Boolean);
+    return (proveedores.datos ?? [])
+      .filter((p) => {
+        const texto = normalizar(`${p.nombre} ${p.nit ?? ""} ${p.contacto ?? ""} ${p.telefono ?? ""}`);
+        return palabras.every((w) => texto.includes(w));
+      })
+      .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+  }, [proveedores.datos, busqueda]);
+
+  const paginas = usePaginacion(filtrados, 10, busqueda);
 
   if (!usuario) return null;
 
@@ -32,10 +47,17 @@ export default function ProveedoresPage() {
 
       <Aviso texto={mensaje} tipo="exito" />
 
-      <div className="tabla-contenedor" style={{ marginTop: mensaje ? 14 : 0 }}>
+      <div className="filtros" style={{ marginTop: mensaje ? 14 : 0 }}>
+        <label className="visualmente-oculto" htmlFor="buscar">Buscar proveedor</label>
+        <input id="buscar" className="control buscar" type="search" placeholder="Buscar por nombre, NIT, contacto o teléfono"
+          value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
+      </div>
+
+      <div className="tabla-contenedor">
         <EstadoCarga cargando={proveedores.cargando} error={proveedores.error}
-          vacio={proveedores.datos?.length === 0} textoVacio="Todavía no hay proveedores." />
-        {!!proveedores.datos?.length && (
+          vacio={!!proveedores.datos && filtrados.length === 0}
+          textoVacio={proveedores.datos?.length ? "Ningún proveedor coincide con la búsqueda." : "Todavía no hay proveedores."} />
+        {filtrados.length > 0 && (
           <table>
             <thead>
               <tr>
@@ -46,7 +68,7 @@ export default function ProveedoresPage() {
               </tr>
             </thead>
             <tbody>
-              {proveedores.datos.map((p) => (
+              {paginas.visibles.map((p) => (
                 <tr key={p.id_proveedor}>
                   <td>
                     <span className="principal-celda">{p.nombre}</span>
@@ -67,6 +89,7 @@ export default function ProveedoresPage() {
           </table>
         )}
       </div>
+      <Paginador p={paginas} nombre="proveedores" />
 
       {esAdmin && (
         <>

@@ -1913,3 +1913,279 @@ dialog.dialogo::backdrop {
     flex: 1 1 100%;
   }
 }
+
+/* --------------------------------------------------------------------------
+   Paginador
+   -------------------------------------------------------------------------- */
+
+.paginador {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 4px 0;
+}
+
+.paginador .paginas {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.paginador .paginas button {
+  min-width: 34px;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--radio-pequeno);
+  background: var(--superficie);
+  box-shadow: var(--sombra-panel);
+  color: var(--tinta);
+  font-size: var(--t-pequeno);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  transition: background var(--rapido) ease;
+}
+
+.paginador .paginas button:hover:not(:disabled) {
+  background: var(--superficie-2);
+}
+
+.paginador .paginas button[aria-current="page"] {
+  background: var(--acento);
+  color: #fff;
+}
+
+.paginador .paginas button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.paginador .elipsis {
+  display: inline-grid;
+  place-items: center;
+  min-width: 24px;
+  color: var(--tinta-2);
+}
+
+.paginador .tamano {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.paginador .tamano .control {
+  width: auto;
+  min-height: 34px;
+  padding: 4px 30px 4px 10px;
+}
+
+/* Paginador dentro de un panel (catálogo de la venta). */
+.panel > .paginador {
+  padding: 12px 22px 16px;
+  border-top: 1px solid var(--linea-suave);
+}
+
+/* --------------------------------------------------------------------------
+   Filtros extra
+   -------------------------------------------------------------------------- */
+
+.filtro-fecha {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filtros .filtro-fecha .control {
+  min-width: 150px;
+}
+
+.interruptor {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 6px;
+  color: var(--tinta-2);
+  cursor: pointer;
+}
+
+.interruptor input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--acento);
+}
+
+.cifras-resumen.compacto {
+  margin-bottom: 18px;
+}
+
+.cifras-resumen.compacto .cifra {
+  padding: 16px 20px;
+}
+
+.cifras-resumen.compacto .valor {
+  font-size: 24px;
+}
+
+.resumen-piezas {
+  display: block;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.etiqueta.sede-propia {
+  background: var(--acento-suave);
+  color: var(--acento);
+}
+
+.etiqueta.sede-aliada {
+  background: #e7ecf7;
+  color: #2f4f8f;
+}
+
+/* --------------------------------------------------------------------------
+   Buscador de cliente (nueva venta)
+   -------------------------------------------------------------------------- */
+
+.buscador-cliente {
+  position: relative;
+}
+
+.opciones-cliente {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  right: 0;
+  left: 0;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 6px;
+  list-style: none;
+  border-radius: var(--radio);
+  background: var(--superficie);
+  box-shadow: var(--sombra-flotante);
+}
+
+.opciones-cliente li[role="option"] {
+  display: grid;
+  gap: 1px;
+  padding: 8px 10px;
+  border-radius: var(--radio-pequeno);
+  cursor: pointer;
+}
+
+.opciones-cliente li.activa {
+  background: var(--acento-suave);
+}
+
+.opciones-cliente .titulo {
+  font-weight: 500;
+}
+
+.opciones-cliente .sin-resultados {
+  padding: 8px 10px;
+}
+
+.opciones-cliente .crear {
+  padding: 8px 10px 4px;
+  border-top: 1px solid var(--linea-suave);
+  margin-top: 4px;
+}
+
+.cliente-elegido {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--acento);
+  border-radius: var(--radio);
+  background: var(--acento-suave);
+}
+
+.cliente-elegido .titulo {
+  font-weight: 500;
+}
+
+/* --------------------------------------------------------------------------
+   Detalle de una venta (diálogo)
+   -------------------------------------------------------------------------- */
+
+dialog.dialogo:has(.detalle-factura) {
+  width: min(640px, calc(100vw - 32px));
+}
+
+.detalle-factura {
+  display: grid;
+  gap: 18px;
+}
+
+.estado-factura {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.datos-factura {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.datos-factura > div {
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  padding: 12px 14px;
+  border-radius: var(--radio);
+  background: var(--fondo);
+}
+
+.datos-factura dt {
+  color: var(--tinta-2);
+  font-size: 12px;
+}
+
+.datos-factura dd {
+  font-weight: 500;
+}
+
+.tabla-factura {
+  min-width: 0;
+}
+
+.tabla-factura th,
+.tabla-factura td {
+  padding: 9px 4px;
+}
+
+.tabla-factura tfoot td {
+  border-top: 1px solid var(--linea);
+  border-bottom: 0;
+  font-weight: 600;
+  font-size: 17px;
+}
+
+.dialogo .pie-dialogo.separado {
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 14px;
+  border-top: 1px solid var(--linea-suave);
+}
+
+.boton.peligro-texto {
+  color: var(--peligro);
+}
+
+@media (max-width: 560px) {
+  .datos-factura {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .paginador {
+    justify-content: center;
+  }
+}
