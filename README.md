@@ -11,7 +11,7 @@ juntas.
 
 | Backend | Frontend | Base de datos | Pruebas |
 |---|---|---|---|
-| Django 6 · Django REST Framework · JWT | Next.js 16 · React 19 · TypeScript | PostgreSQL | 95 pruebas automáticas |
+| Django 6 · Django REST Framework · JWT | Next.js 16 · React 19 · TypeScript | PostgreSQL | 101 pruebas automáticas |
 
 ---
 
@@ -217,7 +217,7 @@ Cuentas de prueba (las crea `backend/poblar_datos.py`):
 Pruebas y verificación:
 
 ```powershell
-uv run python manage.py test inventario    # desde backend/: 95 pruebas
+uv run python manage.py test inventario    # desde backend/: 101 pruebas
 npm run lint                               # desde frontend/: 0 problemas
 npm run build
 ```
