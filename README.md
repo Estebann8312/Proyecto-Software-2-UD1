@@ -112,28 +112,41 @@ El formato completo, las reglas y lo que hace cada equipo están en
 
 ## 4. Análisis y diseño
 
+Cada diagrama se muestra en su versión **inicial** (diseño) y **final** (lo que quedó implementado).
+En los finales, lo nuevo o cambiado va en verde.
+
 ### Casos de uso
 
-Lo que hace hoy cada actor. El administrador puede hacer todo lo del vendedor, y el sistema de la
-otra sede (RepuAuto) consulta y alimenta el consolidado.
+El administrador puede hacer todo lo del vendedor, y el sistema de la otra sede (RepuAuto) consulta y
+alimenta el consolidado.
 
-<p align="center"><img src="docs/Diagramas/Casos_de_uso_actualizado.svg" alt="Diagrama de casos de uso actualizado" width="900"></p>
+| Inicial | Final |
+|---|---|
+| <img src="docs/Diagramas/Casos_de_uso_inicial.png" alt="Casos de uso inicial" width="420"> | <img src="docs/Diagramas/Casos_de_uso_final.svg" alt="Casos de uso final" width="480"> |
 
-Frente al [diagrama del diseño inicial](docs/Diagramas/Casos_de_uso.png) se agregaron: gestionar piezas,
-anular venta, gestionar clientes, generar reportes, el consolidado de sedes y la API para la otra sede.
+Se agregaron: gestionar piezas, anular venta, registrar cliente en tienda, gestionar clientes, generar
+reportes, el consolidado de sedes y la API para la otra sede; «gestionar usuarios» pasó a «gestionar empleados».
 
 ### Diagrama de actividades
 
-El proceso completo: llegada de mercancía, venta con o sin cuenta del cliente, validación de stock y
-consulta del historial de compras.
+El proceso completo: llegada de mercancía, venta, validación de stock, anulación, historial de compras
+y consolidado entre sedes.
 
-<p align="center"><img src="docs/Diagramas/Diagrama_actividades.png" alt="Diagrama de actividades" width="900"></p>
+| Inicial | Final |
+|---|---|
+| <img src="docs/Diagramas/Actividades_inicial.png" alt="Diagrama de actividades inicial" width="450"> | <img src="docs/Diagramas/Actividades_final.png" alt="Diagrama de actividades final" width="450"> |
+
+Se quitó la validación de pago en línea (se cobra en caja) y el registro de cuenta durante la venta
+(el cliente la crea desde la página de registro). Se agregaron la búsqueda del cliente, la venta
+atómica, la anulación y el consolidado con RepuAuto.
 
 ### Base de datos
 
 Modelo relacional en tercera forma normal, con todas las relaciones protegidas por llaves foráneas.
 
-<p align="center"><img src="docs/Diagramas/BD.jpeg" alt="Modelo de la base de datos" width="900"></p>
+| Inicial | Final |
+|---|---|
+| <img src="docs/Diagramas/BD_inicial.jpeg" alt="Base de datos inicial" width="450"> | <img src="docs/Diagramas/BD_final.png" alt="Base de datos final" width="450"> |
 
 Cambios que hizo la implementación sobre el diseño original:
 
@@ -144,6 +157,18 @@ Cambios que hizo la implementación sobre el diseño original:
 | `USUARIO` | Vínculo `user` con la cuenta de Django | El rol se resuelve por ese vínculo y no por el correo |
 | `PROVEEDOR` | `nit` | Va en las facturas de compra que se comparten con RepuAuto |
 | `PIEZA` | `marca` | Va en el inventario que se comparte con RepuAuto |
+
+### Burndown
+
+Puntos de historia restantes por semana, tomados del [Scrum Trace](docs/UD_01_ISII_Scrum_Trace.xlsx).
+La línea naranja es el ritmo ideal.
+
+| Inicial (semana 7, 59 puntos) | Final (semana 12, 92 puntos) |
+|---|---|
+| <img src="docs/Diagramas/Burndown_inicial.png" alt="Burndown inicial" width="450"> | <img src="docs/Diagramas/Burndown_final.png" alt="Burndown final" width="450"> |
+
+El alcance creció de 59 a 92 puntos al sumar reportes, anulación de ventas y la integración con
+RepuAuto. Se completaron 90; los 2 restantes son la prueba contra el servidor real de RepuAuto.
 
 ### Vistas de usuario
 
@@ -240,7 +265,7 @@ npm run build
 │   ├── components/              Barra lateral y componentes comunes
 │   └── lib/                     Cliente de la API, sesión y formatos
 ├── docs/
-│   ├── Diagramas/               Casos de uso, actividades, base de datos y vistas
+│   ├── Diagramas/               Casos de uso, actividades, BD y burndown (inicial y final), vistas
 │   ├── UD_01_ISII_Format_260219.docx    Documento del proyecto
 │   └── UD_01_ISII_Scrum_Trace.xlsx      Backlog, historias, épicas y burndown
 └── CONTRATO-INTEGRACION.md      Acuerdo de integración con RepuAuto
